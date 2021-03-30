@@ -6,14 +6,23 @@ The funny thing is that I probably discovered the pattern separately as I've bee
 
 Hence, I will give my own definition of the driver pattern:
 
-```
-The goal of the driver pattern is to provide an intention layer that allows an automated test to be written in terms of the writer's intention and translates the intention into loweer-level mechanics used to communicate with code under test. 
-```
+> The goal of the driver pattern is to provide an intention layer that allows an automated test to be written in terms of the writer's intention and translates the intention into loweer-level mechanics used to communicate with code under test. 
 
+So far, I was able to use the driver pattern to automate the following kinds of tests:
 
+* End-to-end tests
+* TestHost-based ASP.Net Core tests
+* Application logic tests (in terms of hexagonal architecture - tests that test the inner hexagon with real adapters replaced by test adapters)
+* Adapter tests (in terms of hexagonal architecture)
 
+Also, I was able to use it when writing the following kinds of apps:
 
-Not this: https://martinfowler.com/eaaDev/WindowDriver.html
+* Console utilities (in both end-to-end and application logic tests)
+* WPF Gui application (although only in application logic tests)
+* ASP.Net Core Web API applications
+
+> ### Warning
+> Do not confuse this pattern with WebDriver used bu UI tests to talk to a browser.
 
 Not WebDriver.
 
