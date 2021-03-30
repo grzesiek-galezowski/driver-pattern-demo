@@ -54,7 +54,7 @@ namespace DriverPatternDemo.Controllers
     }
 
     [HttpPost]
-    public async Task<ActionResult> ReportWeather(WeatherForecastDto forecastDto)
+    public async Task<ActionResult> ReportWeatherForecast(WeatherForecastDto forecastDto)
     {
       if (forecastDto.TemperatureC < -100)
       {
