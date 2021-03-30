@@ -112,10 +112,30 @@ public async Task ShouldAllowRetrievingReportedForecast()
 ## Scaling the driver pattern - extension objects
 
 ```csharp
+[Fact]
+public async Task ShouldAllowRetrievingReportedForecast()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
 
+  await driver.WeatherForecastApi.ReportForecast();
+
+  //WHEN
+  using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecast();
+
+  //THEN
+  await retrievedForecast.ShouldBeTheSameAsReported();
+
+  //not really part of the scenario...
+  driver.Notifications.ShouldIncludeNotificationAboutReportedForecast();
+}
 ```
+
+The extension objects are created anew every time to avoid state synchronization issues between them and driver. The driver holds all the data.
 
 TODO: links to each source file
 TODO: page object
 TODO: at which level is this pattern useful?
 TODO describe production code - notification is sent via HTTP
+TODO: links to existing posts on the driver pattern.
