@@ -2,7 +2,7 @@
 
 One description of the driver pattern can be found at http://leitner.io/2015/11/14/driver-pattern-empowers-your-specflow-step-definitions/. It's a description of the pattern for UI testing under SpecFlow framework.
 
-The funny thing is that I probably discovered the pattern separately as I've been using it since ca. 2014 and definitely not for GUI (although surprisingly, I can agree with many of the things written in the mentioned blog post. My discovery of driver came probably from melting two concepts from the Growing Object-Oriented Software Guided By Tests book, where end-to-end automation revolved around two classes - `ApplicationRunner` and `AuctionSniperDriver`. 
+The funny thing is that I probably discovered the pattern separately as I've been using it since ca. 2014 and definitely not for GUI (although surprisingly, I can agree with many of the things written in the mentioned blog post). My discovery of driver came probably from melting two concepts from the Growing Object-Oriented Software Guided By Tests book, where end-to-end automation revolved around two classes - `ApplicationRunner` and `AuctionSniperDriver`. 
 
 Hence, I will give my own definition of the driver pattern:
 
@@ -24,7 +24,11 @@ Also, I was able to use it when writing the following kinds of apps:
 > ### Warning
 > Do not confuse this pattern with WebDriver used bu UI tests to talk to a browser.
 
-Not WebDriver.
+Through a discussion with some good souls who acknowledged that the patterns is not overly popular and well-known and who encouraged me to write something about it, I decided to put together this article, documenting how I understand, use and evolve my drivers.
+
+> ### Note
+> All the code in this folder is companion content to this article.
+
 
 ## Production code
 
