@@ -250,8 +250,148 @@ public record WeatherForecastReportBuilder
 }
 ```
 
+Still, the last response is held inside
+
+## Externalized context management (??)
+
+```csharp
+private static WeatherForecastReportBuilder ForecastReport() => new();
+
+[Fact]
+public async Task ShouldAllowRetrievingReportedForecast()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  var weatherForecast = ForecastReport();
+
+  using var reportForecastResponse = await driver.WeatherForecastApi.Report(weatherForecast);
+
+  //WHEN
+  using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecastBy(
+    await reportForecastResponse.GetId());
+
+  //THEN
+  await retrievedForecast.ShouldBeTheSameAs(weatherForecast);
+
+  //not really part of the scenario...
+  driver.Notifications.ShouldIncludeNotificationAbout(weatherForecast);
+}
+
+[Fact]
+public async Task ShouldAllowRetrievingReportsFromAParticularUser()
+{
+  //GIVEN
+  var userId1 = Any.String();
+  var userId2 = Any.String();
+  var tenantId1 = Any.String();
+  var tenantId2 = Any.String();
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  var user1Forecast1 = ForecastReport() with {UserId = userId1, TenantId = tenantId1};
+  var user1Forecast2 = ForecastReport() with {UserId = userId1, TenantId = tenantId1};
+  var user2Forecast = ForecastReport() with {UserId = userId2, TenantId = tenantId2};
+
+  using var responseForUser1Forecast1 = await driver.WeatherForecastApi.Report(user1Forecast1);
+  using var responseForUser1Forecast2 = await driver.WeatherForecastApi.Report(user1Forecast2);
+  using var responseForUser2Forecast = await driver.WeatherForecastApi.Report(user2Forecast);
+
+  //WHEN
+  using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecastsFrom(userId1, tenantId1);
+
+  //THEN
+  await retrievedForecast.ShouldConsistOf(user1Forecast1, user1Forecast2);
+}
+
+[Fact]
+public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+
+  //WHEN
+  using var reportForecastResponse = await driver.WeatherForecastApi
+    .AttemptToReportForecast(ForecastReport() with {TemperatureC = -101});
+
+  //THEN
+  reportForecastResponse.ShouldBeRejectedAsBadRequest();
+  driver.Notifications.ShouldNotIncludeAnything();
+}
+```
+
+We can now automate multiple users without leaving garbage, but tests can be verbose
+
+## Introducing actors
+
+Actors in the sense of Screenplay pattern, not in "actor model" sense.
+
+```csharp
+[Fact]
+public async Task ShouldAllowRetrievingReportedForecast()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  using var user = new User(driver);
+
+  await user.ReportNewForecast();
+
+  //WHEN
+  using var retrievedForecast = await user.RetrieveLastReportedForecast();
+
+  //THEN
+  await retrievedForecast.ShouldBeTheSameAs(user.LastReportedForecast());
+
+  //not really part of the scenario...
+  driver.Notifications.ShouldIncludeNotificationAbout(user.LastReportedForecast());
+}
+
+[Fact]
+public async Task ShouldAllowRetrievingReportsFromAParticularUser()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  using var user1 = new User(driver);
+  using var user2 = new User(driver);
+
+  await user1.ReportNewForecast();
+  await user1.ReportNewForecast();
+  await user2.ReportNewForecast();
+
+  //WHEN
+  using var allForecastsReportedByUser1 = await user1.RetrieveAllReportedForecasts();
+
+  //THEN
+  await allForecastsReportedByUser1.ShouldConsistOf(user1.AllReportedForecasts());
+}
+
+[Fact]
+public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsBelowAllowedMinimum()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  using var user = new User(driver);
+
+  //WHEN
+  using var reportForecastResponse = 
+    await user.AttemptToReportNewForecast(forecast => forecast with {TemperatureC = -101});
+
+  //THEN
+  reportForecastResponse.ShouldBeRejectedAsBadRequest();
+  driver.Notifications.ShouldNotIncludeAnything();
+}
+```
+
+RetrieveAll... and All.. could use some work.
+
+Remember, this is a pattern. No canonical implementation.
+
 TODO: links to each source file
 TODO: page object
 TODO: at which level is this pattern useful?
 TODO describe production code - notification is sent via HTTP
 TODO: links to existing posts on the driver pattern.
+TODO: change the code so that HTTP responses are added to list and disposed in driver.
