@@ -1,12 +1,12 @@
 ## Driver pattern
 
-* https://docs.specflow.org/projects/specflow/en/latest/Guides/DriverPattern.html
 * http://leitner.io/2015/11/14/driver-pattern-empowers-your-specflow-step-definitions/
 * GOOS (somewhere between their ApplicationRunner and AuctionSniperDriver.
 
 
 Not this: https://martinfowler.com/eaaDev/WindowDriver.html
 
+Not WebDriver.
 
 ## Production code
 
@@ -25,6 +25,8 @@ public class WeatherForecastController : ControllerBase
   public async Task<ActionResult> ReportWeatherForecast(WeatherForecastDto forecastDto) {...}
 }
 ```
+
+TODO document notification.
 
 ## First stab
 
