@@ -1,8 +1,8 @@
-## Driver pattern description
+# Driver pattern description
 
 One description of the driver pattern can be found at http://leitner.io/2015/11/14/driver-pattern-empowers-your-specflow-step-definitions/. It's a description of the pattern for UI testing under SpecFlow framework.
 
-The funny thing is that I probably discovered the pattern separately as I've been using it since ca. 2014 and definitely not for GUI (although surprisingly, I can agree with many of the things written in the mentioned blog post). My discovery of driver came probably from melting two concepts from the Growing Object-Oriented Software Guided By Tests book, where end-to-end automation revolved around two classes - `ApplicationRunner` and `AuctionSniperDriver`. 
+The funny thing is that I probably discovered the pattern separately as I've been using it since ca. 2014 and definitely not for GUI (although surprisingly, I can agree with many of the things written in the mentioned blog post). My discovery of the driver pattern came probably from melting two concepts from the Growing Object-Oriented Software Guided By Tests book, where end-to-end automation revolved around two classes - `ApplicationRunner` and `AuctionSniperDriver`.
 
 Hence, I will give my own definition of the driver pattern:
 
@@ -29,8 +29,20 @@ Through a discussion with some good souls who acknowledged that the patterns is 
 > ### Note
 > All the code in this folder is companion content to this article.
 
+# Examples
+
+All the example driver implementations are written against a sample ASP.Net Core application. The application is based on the standard "weather forecast" template, to make it more familiar, although many parts are modified.
+
+Some words of caution before we move on:
+
+* In the production part, neither the code nor the API is pretty. This sample does not aim to demonstrate how to design good APIs or services or classes. It is made only to serve as something executable for the tests.
+* In one of the example tests, I added a check that isn't really part of the scenario. The purpose is only to decrease the volume of code.
+* The examples show an evolution process. The first example is by far not perfect and the final one probably still has some stuff that can be improved.
+* I am not claiming that the driver pattern is the best way to automate tests. I am still learning, so everything written here is provided as a sort of RFC.
 
 ## Production code
+
+Here is the tested API in a form of a controller (TODO: link to source)
 
 ```csharp
 [ApiController]
@@ -38,19 +50,39 @@ Through a discussion with some good souls who acknowledged that the patterns is 
 public class WeatherForecastController : ControllerBase
 {
   [HttpGet("{id}")]
-  public async Task<WeatherForecastDto> Get(Guid id) {...}
+  public async Task<WeatherForecastDto> Get(Guid id) 
+  {
+    //Retrieves forecast by specified ID, produced when
+    //forecast is reported.
+  }
+
 
   [HttpGet("{tenantId}/{userId}")]
-  public IEnumerable<WeatherForecastDto> GetAllUserForecasts(string tenantId, string userId) {...}
+  public IEnumerable<WeatherForecastDto> GetAllUserForecasts(
+      string tenantId, 
+      string userId) 
+  {
+    //Retrieves all forecasts for a combination of 
+    //a user ID and a tenant ID
+  }
   
   [HttpPost]
-  public async Task<ActionResult> ReportWeatherForecast(WeatherForecastDto forecastDto) {...}
+  public async Task<ActionResult> ReportWeatherForecast(
+      WeatherForecastDto forecastDto) 
+  {
+    //Verifies if temperature is in a valid range
+    //Saves a weather forecast in a database
+    //Sends a notification via HTTP (sic!) 
+    //that a new forecast was reported
+  }
 }
 ```
 
-TODO document notification.
+The notification is only added to the code to warrant usage of a wiremock to make the example a bit more complex.
 
 ## First stab
+
+The first driver-based test looks like this:
 
 ```csharp
 [Fact]
@@ -73,11 +105,22 @@ public async Task ShouldAllowRetrievingReportedForecast()
 }
 ```
 
-Deficiencies:
-* The more methods the more bloated the driver becomes
-* State is managed internally, which is fine by now, but what if we want to write a scenario where a weather report contains bad data? Or where two distinct users report weather?
+The steps are roughly:
 
-If you are interested, this test without any abstractions looks like this:
+1. Create a driver
+1. Start a driver (initiate tested code's startup sequence)
+1. Report a single weather forecast
+1. Retrieve reported forecast
+1. Assert that the retrieved forecast is the same as previously reported
+1. Assert that a notification was sent to a wiremock about the reported forecast.
+
+Several things to note about the above test:
+
+1. Note how I separated creating a driver from starting it. The main reason is that typically I want to have a place to do some additional setup before starting the APP, e.g. changing configuration or setting up some data in database. There are times when the behavior of starting application is interesting by itself and I want to have a place where I could influence this behavior. This place is exactly between creating the driver and starting the application.
+1. The test does almost no state management. Note that in the assertion I say `retrievedForecast.ShouldBeTheSameAsReported()` and I don't pass any arguments. The driver holds all the state internally. This is NOT a property of driver pattern. I did it like this out of pure convenience. The first test I would typically write using TDD and when sketching the scenario before the implementation, I don't want to think too much about the input data structures and output data structures. I want to specify my intention and then I'll introduce more control over the data as necessary.
+1. Note the `retrievedForecast` - this isn't a DTO, but also a part of driver - it's an object made for tests and allows executing some assertions on the retrieved data. Again, when I TDD, I don't care yet what the data is going to be. I just want to state my intention.
+
+By the way, if you are interested, this test without any abstractions looks like this:
 
 ```csharp
 [Fact]
@@ -142,6 +185,15 @@ public async Task ShouldAllowRetrievingReportedForecast()
        tenantId, userId, inputForecastDto.TemperatureC));
 }
 ```
+
+Getting back to the driver - the way it is currently designed has some drawbacks that will become more evident as I add more tests. For example:
+
+1. The more methods are added to the driver, the more bloated the driver becomes. This doesn't become evident until about a dozen of scenarios, but later it makes picking the right methods from the driver more difficult.
+1. State is managed internally, which is fine by now, but what if we want to write a scenario where a weather report contains bad data?
+1. Or what about a scenario where two distinct users report weather? Currently there is no way to tell what user is making the request.
+
+
+
 
 ## Extension objects
 
