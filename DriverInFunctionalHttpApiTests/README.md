@@ -16,7 +16,7 @@ public class WeatherForecastController : ControllerBase
 }
 ```
 
-# First stab
+## First stab
 
 ```csharp
 [Fact]
@@ -109,7 +109,7 @@ public async Task ShouldAllowRetrievingReportedForecast()
 }
 ```
 
-## Scaling the driver pattern - extension objects
+## Extension objects
 
 ```csharp
 [Fact]
@@ -133,6 +133,122 @@ public async Task ShouldAllowRetrievingReportedForecast()
 ```
 
 The extension objects are created anew every time to avoid state synchronization issues between them and driver. The driver holds all the data.
+
+Has remaining two deficiencies.
+
+## Lambda builders
+
+Option 1.
+
+We can then write a test that modifies the default values (in the WHEN section):
+
+```csharp
+[Fact]
+public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+
+  //WHEN
+  using var reportForecastResponse = await driver.WeatherForecastApi.AttemptToReportForecast(
+    request => request with {TemperatureC = -101});
+
+  //THEN
+  reportForecastResponse.ShouldBeRejectedAsBadRequest();
+  driver.Notifications.ShouldNotIncludeAnything();
+}
+```
+
+## Chaining methods on extension objects
+
+```csharp
+[Fact]
+public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+
+  //WHEN
+  using var reportForecastResponse = await driver.WeatherForecastApi
+    .WithTemperatureOf(-101)
+    .AttemptToReportForecast();
+
+  //THEN
+  reportForecastResponse.ShouldBeRejectedAsBadRequest();
+  driver.Notifications.ShouldNotIncludeAnything();
+}
+```
+
+May result in mismatch of setups and calls. E.g. I may specify a parameter used only by call 1, but then invoke call 2.
+
+## External builder
+
+```csharp
+[Fact]
+public async Task ShouldAllowRetrievingReportedForecast()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  var weatherForecast = ForecastReport();
+
+  await driver.WeatherForecastApi.Report(weatherForecast);
+
+  //WHEN
+  using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecast();
+
+  //THEN
+  await retrievedForecast.ShouldBeTheSameAs(weatherForecast);
+
+  //not really part of the scenario...
+  driver.Notifications.ShouldIncludeNotificationAbout(weatherForecast);
+}
+
+[Fact]
+public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+
+  //WHEN
+  using var reportForecastResponse = await driver.WeatherForecastApi
+    .AttemptToReportForecast(ForecastReport() with {TemperatureC = -101});
+
+  //THEN
+  reportForecastResponse.ShouldBeRejectedAsBadRequest();
+  driver.Notifications.ShouldNotIncludeAnything();
+}
+
+private static WeatherForecastReportBuilder ForecastReport() => new();
+```
+
+"last input" is no longer managed by the driver. "Last output" still is.
+
+Builder is a simple record:
+
+```csharp
+public record WeatherForecastReportBuilder
+{
+  public string TenantId { private get; init; } = Any.String();
+  public string UserId { private get; init; } = Any.String();
+  public DateTime Time { private get; init; } = Any.Instance<DateTime>();
+  public int TemperatureC { private get; init; } = Any.Integer();
+  public string Summary { private get; init; } = Any.String();
+
+  public WeatherForecastDto Build()
+  {
+    return new(
+      TenantId, 
+      UserId, 
+      Time,
+      TemperatureC,
+      Summary);
+  }
+}
+```
 
 TODO: links to each source file
 TODO: page object
