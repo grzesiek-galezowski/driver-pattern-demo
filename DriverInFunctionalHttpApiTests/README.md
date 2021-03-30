@@ -186,16 +186,17 @@ public async Task ShouldAllowRetrievingReportedForecast()
 }
 ```
 
-Getting back to the driver - the way it is currently designed has some drawbacks that will become more evident as I add more tests. For example:
+Getting back to the driver - the way it is currently designed has some drawbacks that will become more evident as I add more tests. These drawbacks are:
 
 1. The more methods are added to the driver, the more bloated the driver becomes. This doesn't become evident until about a dozen of scenarios, but later it makes picking the right methods from the driver more difficult.
 1. State is managed internally, which is fine by now, but what if we want to write a scenario where a weather report contains bad data?
 1. Or what about a scenario where two distinct users report weather? Currently there is no way to tell what user is making the request.
 
+I'll start by addressing the first of those concerns.
 
+## Evolution - extension objects
 
-
-## Extension objects
+To further partition the methods in the driver, I will introduce special objects that will take on parts of driver tasks. Take a look at the modified version of the above test:
 
 ```csharp
 [Fact]
@@ -208,7 +209,8 @@ public async Task ShouldAllowRetrievingReportedForecast()
   await driver.WeatherForecastApi.ReportForecast();
 
   //WHEN
-  using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecast();
+  using var retrievedForecast 
+    = await driver.WeatherForecastApi.GetReportedForecast();
 
   //THEN
   await retrievedForecast.ShouldBeTheSameAsReported();
@@ -218,9 +220,25 @@ public async Task ShouldAllowRetrievingReportedForecast()
 }
 ```
 
-The extension objects are created anew every time to avoid state synchronization issues between them and driver. The driver holds all the data.
+Note that this time, I am accessing the driver though its properties: `WeatherForecastApi` (for operations on weather forecast API) and `Notifications` (for operations on notifications). This is a trick I use to make the driver itself leaner.
+
+If we look at how these properties are defined:
+
+```csharp
+public NotificationsDriverExtension Notifications 
+  => new(_userId, _tenantId, _notificationRecipient, _lastInputForecastDto.Value);
+
+public WeatherForecastApiDriverExtension WeatherForecastApi 
+  => new(this, _tenantId, _userId, HttpClient, _lastReportResult, _lastInputForecastDto);
+```
+
+You'll notice that the extension objects are always created anew every time the properties are accessed. This is on purpose, to avoid the necessaity of state synchronization between them and the driver. The driver holds all the current data and feeds it to extension objects every time they are created.
+
+Also, if you read through the code, you'll notice that the extension objects feed some data back to the driver via an interface called `AppDriverContext`. This is a consequence of the driver managing the state. Short term, it isn't that bad, but I will be dealing with it shortly.
 
 Has remaining two deficiencies.
+
+?????????????????
 
 ## Lambda builders
 
