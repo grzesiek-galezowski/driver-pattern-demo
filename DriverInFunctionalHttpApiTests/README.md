@@ -191,14 +191,14 @@ public async Task ShouldAllowRetrievingReportedForecast()
 Getting back to the driver - the way it is currently designed has some drawbacks that will become more evident as I add more tests. These drawbacks are:
 
 1. The more methods are added to the driver, the more bloated the driver becomes. This doesn't become evident until about a dozen of scenarios, but later it makes picking the right methods from the driver more difficult.
-1. State is managed internally, which is fine by now, but what if we want to write a scenario where a weather report contains bad data?
-1. Or what about a scenario where two distinct users report weather? Currently there is no way to tell what user is making the request.
+1. State is managed internally, which is fine by now, but what if we want to write a scenario where a weather report contains bad data? How do we tell the driver to send bad data?
+1. Or what about a scenario where two distinct users report weather? Currently there is no way to specify what user is making the request.
 
-I'll start by addressing the first of those concerns.
+I'll start by addressing the first of those drawbacks.
 
 ## [Evolution - extension objects](https://github.com/grzesiek-galezowski/driver-pattern-demo/tree/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_02_DriverWithExtensionObjects)
 
-To further partition the methods in the driver, I will introduce special objects that will take on parts of driver tasks. Take a look at the modified version of the above test:
+To further partition the methods in the driver, I will introduce special objects that will take on parts of driver API. Take a look at the modified version of the above test:
 
 ```csharp
 [Fact]
@@ -222,9 +222,9 @@ public async Task ShouldAllowRetrievingReportedForecast()
 }
 ```
 
-Note that this time, I am accessing the driver though its properties: `WeatherForecastApi` (for operations on weather forecast API) and `Notifications` (for operations on notifications). This is a trick I use to make the driver itself leaner.
+Note that this time, I am accessing the driver logic through properties: `WeatherForecastApi` (for operations on weather forecast API) and `Notifications` (for operations on notifications). This is a trick I use to make the driver itself leaner.
 
-If we look at how these properties are defined:
+If you look at how these properties are defined:
 
 ```csharp
 public NotificationsDriverExtension Notifications 
@@ -234,11 +234,11 @@ public WeatherForecastApiDriverExtension WeatherForecastApi
   => new(this, _tenantId, _userId, HttpClient, _lastReportResult, _lastInputForecastDto);
 ```
 
-You'll notice that the extension objects are always created anew every time the properties are accessed. This is on purpose, to avoid the necessaity of state synchronization between them and the driver. The driver holds all the current data and feeds it to extension objects every time they are created.
+You'll notice that the extension objects are always created anew every time the properties are accessed. This is on purpose, to avoid the necessity of state synchronization between them and the driver. The driver holds all the current data and feeds it to extension objects every time they are created. This way the extension objects get the most "fresh" data.
 
-Also, if you read through the code, you'll notice that the extension objects feed some data back to the driver via an interface called `AppDriverContext`. This is a consequence of the driver managing the state. Short term, it isn't that bad, but I will be dealing with it shortly.
+Also, if you read through the code, you'll notice that the extension objects feed some data back to the driver via an interface called `IAppDriverContext`. This is a consequence of the driver managing the state. Short term, it isn't that bad, but I will be dealing with it later.
 
-But first, let's see what we can do to allow testing with different data. There are three routes I usually choose from:
+First, though, let's see what we can do to allow testing with different data (e.g. simulate a bad request). To achieve this, there are three routes I usually choose from:
 
 * Lambda customizations
 * Chaining methods on extension objects
@@ -248,7 +248,7 @@ Let's take them one by one and analyze.
 
 ## [Lambda customizations](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_03_DriverCustomizableWithLambdaBuilders/E2eSpecification.cs)
 
-In this approach, driver methods still use the default data held inside the driver, but allow customizing that data by passing a lambda. To demonstrate it, here is a test which states that temperatures below -100 Celcius degrees should be rejected (I know, I know...).
+In this approach, driver methods still use the default data held inside the driver, but allow customizing that data with a lambda, passed as a parameter. To demonstrate it, here is a test which states that temperatures below -100 Celcius degrees should be rejected (I know, I know...).
 
 ```csharp
 [Fact]
@@ -300,7 +300,7 @@ public record WeatherForecastReportBuilder(string UserId, string TenantId)
 }
 ```
 
-The builder accepts `UserId` and `TenantId` as constructor arguments because this comes from the driver that holds the default values.
+Note that the builder accepts `UserId` and `TenantId` as constructor arguments because this comes from the driver that holds the default values.
 
 ## [Chaining methods on extension objects](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_04_DriverCustomizableWithExtensionObjects/E2eSpecification.cs)
 
@@ -390,7 +390,7 @@ public record WeatherForecastReportBuilder
 {
   public string TenantId { private get; init; } = Any.String();
   public string UserId { private get; init; } = Any.String();
-  public DateTime Time { private get; init; } = Any.Instance<DateTime>();
+  public DateTime Time { private get; init; } = Any.DateTime();
   public int TemperatureC { private get; init; } = Any.Integer();
   public string Summary { private get; init; } = Any.String();
 
@@ -406,7 +406,7 @@ public record WeatherForecastReportBuilder
 }
 ```
 
-This time, however, it does not accept `TenantId` and `UserId` but has some values defined. This means that if we need to preserve these two values across several requests, the test body must supply them every time to the external builders.
+This time, however, it does not accept `TenantId` and `UserId` but has some values defined. This means that if we need to preserve these two values across several requests, the test body must supply them every time to the external builders. We cannot rely on the driver doing it anymore.
 
 If we can pull this off, however, it tends to simplify the driver (at the expense of test body, but it's often a good trade-off because we have other ways of simplifying the test body - coming shortly).
 
@@ -415,7 +415,6 @@ So the driver does not have to remember the reported forecasts anymore, but it s
 ## [Externalized forecast report response management](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_06_DriverCustomizableWithExternalizedContextManagement/E2eSpecification.cs)
 
 After pushing the responsibility of holding the responses from drive to the test, we get something like this:
-
 
 ```csharp
 private static WeatherForecastReportBuilder ForecastReport() => new();
@@ -569,10 +568,12 @@ While the naming could be improved (a reader might be confused about e.g. `Retri
 
 This form of driver pattern with actors is typically the ultimate form I arrive at when a piece of code I maintain grows for a longer period of time. Every time I add new tests I refactor the automation layer to make it more "domain-oriented" and flexible at the same time.
 
-# Advantages
+This concludes my set of examples.
+
+# Driver pattern - advantages
 
 The biggest advantage is that it brings the test very close to a statement of intention - when done well, driver pattern removes a lot of noise from the test body. This may improve readability of the tests and (at some point) the ability to create new scenarios without digging through a lot of low-level code.
 
-# Disadvantages
+# Driver pattern - disadvantages
 
 I guess the biggest disadvantage of the pattern is that a lot of complexity is pushed into the driver, so care needs to be taken to not make it an overcomplicated mess. Also, advanced fluent API design skills help, because it's now always obvious which evolution path would be the best for a driver, so having more options is always useful.
