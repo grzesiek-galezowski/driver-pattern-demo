@@ -257,7 +257,7 @@ namespace FunctionalSpecification._05_DriverCustomizableWithExternalBuilders
     }
   }
 
-  public record WeatherForecastReportBuilder()
+  public record WeatherForecastReportBuilder
   {
     public string TenantId { private get; init; } = Any.String();
     public string UserId { private get; init; } = Any.String();
