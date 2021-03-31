@@ -42,7 +42,7 @@ Some words of caution before we move on:
 
 ## Production code
 
-Here is the tested API in a form of a controller (TODO: link to source)
+Here is the tested API in a form of a [controller](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/DriverPatternDemo/Controllers/WeatherForecastController.cs)
 
 ```csharp
 [ApiController]
@@ -80,7 +80,7 @@ public class WeatherForecastController : ControllerBase
 
 The notification is only added to the code to warrant usage of a wiremock to make the example a bit more complex.
 
-## First stab
+## [First stab](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_01_SimpleDriver/E2eSpecification.cs)
 
 The first driver-based test looks like this:
 
@@ -194,7 +194,7 @@ Getting back to the driver - the way it is currently designed has some drawbacks
 
 I'll start by addressing the first of those concerns.
 
-## Evolution - extension objects
+## [Evolution - extension objects](https://github.com/grzesiek-galezowski/driver-pattern-demo/tree/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_02_DriverWithExtensionObjects)
 
 To further partition the methods in the driver, I will introduce special objects that will take on parts of driver tasks. Take a look at the modified version of the above test:
 
@@ -244,7 +244,7 @@ But first, let's see what we can do to allow testing with different data. There 
 
 Let's take them one by one and analyze.
 
-## Lambda customizations
+## [Lambda customizations](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_03_DriverCustomizableWithLambdaBuilders/E2eSpecification.cs)
 
 In this approach, driver methods still use the default data held inside the driver, but allow customizing that data by passing a lambda. To demonstrate it, here is a test which states that temperatures below -100 Celcius degrees should be rejected (I know, I know...).
 
@@ -300,9 +300,9 @@ public record WeatherForecastReportBuilder(string UserId, string TenantId)
 
 The builder accepts `UserId` and `TenantId` as constructor arguments because this comes from the driver that holds the default values.
 
-## Chaining methods on extension objects
+## [Chaining methods on extension objects](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_04_DriverCustomizableWithExtensionObjects/E2eSpecification.cs)
 
-I consider this approach more crude, although it might lead to writing a bit less code at times. The approach takes advantage of the fact that every time we request an extension object from the driver, we get a new instance. Thus, we can use that instance to customize it with data needed for our single, custom request. Below is the same test as in the previous section, written with chaining methods on extension object.
+This is just another option. I consider this approach to be more crude, although it might lead to writing a bit less code at times. The approach takes advantage of the fact that every time we request an extension object from the driver, we get a new instance. Thus, we can use that instance to customize it with data needed for our single, custom request. Below is the same test as in the previous section, written with chaining methods on extension object.
 
 ```csharp
 [Fact]
@@ -335,7 +335,7 @@ Demonstrate how the chaining is used.
 
 A disadvantage of this approach might be that an extension object must allow customizing data used by any of its chain finisher methods. So I could customize a parameter not used in the method that follows the customization.
 
-## Externally created builders
+## [Externally created builders](https://github.com/grzesiek-galezowski/driver-pattern-demo/tree/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_05_DriverCustomizableWithExternalBuilders)
 
 Finally, we can just take the request data out of the driver and put it into a separate builder class. We could fill the builder with any data we want and then just pass it.
 
@@ -410,7 +410,7 @@ If we can pull this off, however, it tends to simplify the driver (at the expens
 
 So the driver does not have to remember the reported forecasts anymore, but it still remembers the responses to reports. We can externalize that knowledge as well.
 
-## Externalized forecast report response management
+## [Externalized forecast report response management](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_06_DriverCustomizableWithExternalizedContextManagement/E2eSpecification.cs)
 
 After pushing the responsibility of holding the responses from drive to the test, we get something like this:
 
@@ -494,9 +494,9 @@ public async Task ShouldAllowRetrievingReportsFromAParticularUser()
 
 Let's try to get rid of some of the verbosity.
 
-## Introducing actors
+## [Introducing actors](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_07_DriverCustomizableWithActors/E2eSpecification.cs)
 
-Here, I mean actors in the sense of [Screenplay pattern](https://www.infoq.com/articles/Beyond-Page-Objects-Test-Automation-Serenity-Screenplay/), not in the "actor model" sense.
+Here, I mean actors in a sense similar to that of [Screenplay pattern](https://www.infoq.com/articles/Beyond-Page-Objects-Test-Automation-Serenity-Screenplay/), not in the "actor model" sense.
 
 As in our application a unit of isolation is "user", I will introduce a special class called `User` that holds the user context and can interact with the driver.
 
