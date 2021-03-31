@@ -1,12 +1,12 @@
-# Driver pattern description
+# (My) Driver pattern description
 
 One description of the driver pattern can be found at http://leitner.io/2015/11/14/driver-pattern-empowers-your-specflow-step-definitions/. It's a description of the pattern for UI testing under SpecFlow framework.
 
-The funny thing is that I probably discovered the pattern separately as I've been using it since ca. 2014 and definitely not for GUI (although surprisingly, I can agree with many of the things written in the mentioned blog post). My discovery of the driver pattern came probably from melting two concepts from the Growing Object-Oriented Software Guided By Tests book, where end-to-end automation revolved around two classes - `ApplicationRunner` and `AuctionSniperDriver`.
+The funny thing is that I probably discovered the pattern separately as I've been using it since ca. 2014 and definitely not for GUI (although surprisingly, I can agree with many of the things written in the mentioned blog post). My discovery of the driver pattern came probably from melting two classes from the Growing Object-Oriented Software Guided By Tests book: `ApplicationRunner` and `AuctionSniperDriver`, on which the end-to-end automation in the book was based.
 
-Hence, I will give my own definition of the driver pattern:
+My definition of the driver pattern is:
 
-> The goal of the driver pattern is to provide an intention layer that allows an automated test to be written in terms of the writer's intention and translates the intention into loweer-level mechanics used to communicate with code under test. 
+> The goal of the driver pattern is to provide an intention layer that allows an automated test to be written in terms of the writer's intention and translates the intention into lower-level mechanics used to communicate with code under test. 
 
 So far, I was able to use the driver pattern to automate the following kinds of tests:
 
@@ -21,26 +21,28 @@ Also, I was able to use it when writing the following kinds of apps:
 * WPF Gui application (although only in application logic tests)
 * ASP.Net Core Web API applications
 
-> ### Warning
-> Do not confuse this pattern with WebDriver used bu UI tests to talk to a browser.
+I used this pattern in C# and Java, but suspect it can be used in others.
 
-Through a discussion with some good souls who acknowledged that the patterns is not overly popular and well-known and who encouraged me to write something about it, I decided to put together this article, documenting how I understand, use and evolve my drivers.
+> ### Warning
+> Do not confuse this pattern with [WebDriver](https://www.w3.org/TR/webdriver/) often used by UI tests to talk to a browser.
+
+Through discussion with some good souls who acknowledged that the patterns is not overly popular and well-known and who encouraged me to write something about it, I decided to put together this article, documenting how I understand, use and evolve my drivers.
 
 > ### Note
-> All the code in this folder is companion content to this article.
+> All the code in this folder is companion content to this article. The article does not discuss every part of the sample code. I encourage you to inspect it and play with it in your IDE of choice.
 
 # Examples
 
-All the example driver implementations are written against a sample ASP.Net Core application. The application is based on the standard "weather forecast" template, to make it more familiar, although many parts are modified.
+All the example driver implementations are written against a sample ASP.Net Core application. The application is based on the standard "weather forecast" template, to make it more familiar, although many parts were modified.
 
 Some words of caution before we move on:
 
-* In the production part, neither the code nor the API is pretty. This sample does not aim to demonstrate how to design good APIs or services or classes. It is made only to serve as something executable for the tests.
-* In one of the example tests, I added a check that isn't really part of the scenario. The purpose is only to decrease the volume of code.
-* The examples show an evolution process. The first example is by far not perfect and the final one probably still has some stuff that can be improved.
+* In the production part, neither the code nor the API is pretty. The production part of this sample does not aim to demonstrate how to design good web APIs or services or classes. It is made only to serve as something executable for the tests.
+* In one of the example tests, I added a check that isn't really part of the scenario. The purpose is only to decrease the volume of code for easier digestion, nothing more.
+* The examples show an evolution process. The first example is by far not perfect and the final one still has some stuff that can be improved.
 * I am not claiming that the driver pattern is the best way to automate tests. I am still learning, so everything written here is provided as a sort of RFC.
 
-## Production code
+## [Production code](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/DriverPatternDemo/Controllers/WeatherForecastController.cs)
 
 Here is the tested API in a form of a [controller](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/DriverPatternDemo/Controllers/WeatherForecastController.cs)
 
