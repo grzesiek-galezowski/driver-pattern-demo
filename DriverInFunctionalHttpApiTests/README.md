@@ -236,15 +236,17 @@ You'll notice that the extension objects are always created anew every time the 
 
 Also, if you read through the code, you'll notice that the extension objects feed some data back to the driver via an interface called `AppDriverContext`. This is a consequence of the driver managing the state. Short term, it isn't that bad, but I will be dealing with it shortly.
 
-Has remaining two deficiencies.
+But first, let's see what we can do to allow testing with different data. There are three routes I usually choose from:
 
-?????????????????
+* Lambda customizations
+* Chaining methods on extension objects
+* Externally created builders
 
-## Lambda builders
+Let's take them one by one and analyze.
 
-Option 1.
+## Lambda customizations
 
-We can then write a test that modifies the default values (in the WHEN section):
+In this approach, driver methods still use the default data held inside the driver, but allow customizing that data by passing a lambda. To demonstrate it, here is a test which states that temperatures below -100 Celcius degrees should be rejected (I know, I know...).
 
 ```csharp
 [Fact]
@@ -255,8 +257,10 @@ public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessTha
   await driver.StartAsync();
 
   //WHEN
-  using var reportForecastResponse = await driver.WeatherForecastApi.AttemptToReportForecast(
-    request => request with {TemperatureC = -101});
+  using var reportForecastResponse = 
+    await driver.WeatherForecastApi
+      .AttemptToReportForecast(
+         report => report with {TemperatureC = -101});
 
   //THEN
   reportForecastResponse.ShouldBeRejectedAsBadRequest();
@@ -264,7 +268,41 @@ public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessTha
 }
 ```
 
+Note this part of the code:
+
+```csharp
+  using var reportForecastResponse = 
+    await driver.WeatherForecastApi
+      .AttemptToReportForecast(
+         report => report with {TemperatureC = -101});
+```
+
+Here, I am passing a lambda inside which I can customize a builder for a weather forecast. The builder is just a record:
+
+```csharp
+public record WeatherForecastReportBuilder(string UserId, string TenantId)
+{
+  public DateTime Time { private get; init; } = Any.Instance<DateTime>();
+  public int TemperatureC { private get; init; } = Any.Integer();
+  public string Summary { private get; init; } = Any.String();
+
+  public WeatherForecastDto Build()
+  {
+    return new(
+      TenantId, 
+      UserId, 
+      Time,
+      TemperatureC,
+      Summary);
+  }
+}
+```
+
+The builder accepts `UserId` and `TenantId` as constructor arguments because this comes from the driver that holds the default values.
+
 ## Chaining methods on extension objects
+
+I consider this approach more crude, although it might lead to writing a bit less code at times. The approach takes advantage of the fact that every time we request an extension object from the driver, we get a new instance. Thus, we can use that instance to customize it with data needed for our single, custom request. Below is the same test as in the previous section, written with chaining methods on extension object.
 
 ```csharp
 [Fact]
@@ -285,11 +323,27 @@ public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessTha
 }
 ```
 
-May result in mismatch of setups and calls. E.g. I may specify a parameter used only by call 1, but then invoke call 2.
-
-## External builder
+The following lines:
 
 ```csharp
+using var reportForecastResponse = await driver.WeatherForecastApi
+  .WithTemperatureOf(-101)
+  .AttemptToReportForecast();
+```
+
+Demonstrate how the chaining is used.
+
+A disadvantage of this approach might be that an extension object must allow customizing data used by any of its chain finisher methods. So I could customize a parameter not used in the method that follows the customization.
+
+## Externally created builders
+
+Finally, we can just take the request data out of the driver and put it into a separate builder class. We could fill the builder with any data we want and then just pass it.
+
+Here are the two tests we have so far, rewritten with external builder:
+
+```csharp
+private static WeatherForecastReportBuilder ForecastReport() => new();
+
 [Fact]
 public async Task ShouldAllowRetrievingReportedForecast()
 {
@@ -325,13 +379,9 @@ public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessTha
   reportForecastResponse.ShouldBeRejectedAsBadRequest();
   driver.Notifications.ShouldNotIncludeAnything();
 }
-
-private static WeatherForecastReportBuilder ForecastReport() => new();
 ```
 
-"last input" is no longer managed by the driver. "Last output" still is.
-
-Builder is a simple record:
+Similarly to the lambda customization case, the builder is a simple record:
 
 ```csharp
 public record WeatherForecastReportBuilder
@@ -353,6 +403,8 @@ public record WeatherForecastReportBuilder
   }
 }
 ```
+
+This time, however, it does not accept
 
 Still, the last response is held inside
 
