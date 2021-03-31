@@ -494,7 +494,7 @@ public async Task ShouldAllowRetrievingReportsFromAParticularUser()
 }
 ```
 
-Let's try to get rid of some verbosity.
+Let's try to get rid of some of the verbosity.
 
 ## Introducing actors
 
