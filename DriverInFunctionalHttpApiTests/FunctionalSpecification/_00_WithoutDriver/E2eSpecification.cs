@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using TddXt.AnyRoot.Numbers;
 using TddXt.AnyRoot.Strings;
+using TddXt.AnyRoot.Time;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -40,7 +41,7 @@ namespace FunctionalSpecification._00_WithoutDriver
       var inputForecastDto = new WeatherForecastDto(
         tenantId, 
         userId, 
-        Any.Instance<DateTime>(),
+        Any.DateTime(),
         Any.Integer(),
         Any.String());
       using var host = Host

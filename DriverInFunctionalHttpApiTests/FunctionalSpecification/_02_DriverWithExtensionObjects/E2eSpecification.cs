@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using TddXt.AnyRoot.Numbers;
 using TddXt.AnyRoot.Strings;
+using TddXt.AnyRoot.Time;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -188,7 +189,7 @@ namespace FunctionalSpecification._02_DriverWithExtensionObjects
       var forecastDto = new WeatherForecastDto(
         _tenantId, 
         _userId,
-        Any.Instance<DateTime>(),
+        Any.DateTime(),
         Any.Integer(),
         Any.String());
 

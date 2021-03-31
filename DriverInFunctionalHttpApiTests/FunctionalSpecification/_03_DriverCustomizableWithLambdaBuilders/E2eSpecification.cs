@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using TddXt.AnyRoot.Numbers;
 using TddXt.AnyRoot.Strings;
+using TddXt.AnyRoot.Time;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -181,7 +182,7 @@ namespace FunctionalSpecification._03_DriverCustomizableWithLambdaBuilders
 
   public record WeatherForecastReportBuilder(string UserId, string TenantId)
   {
-    public DateTime Time { private get; init; } = Any.Instance<DateTime>();
+    public DateTime Time { private get; init; } = Any.DateTime();
     public int TemperatureC { private get; init; } = Any.Integer();
     public string Summary { private get; init; } = Any.String();
 
