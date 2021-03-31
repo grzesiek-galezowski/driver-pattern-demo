@@ -1,5 +1,7 @@
 # Driver pattern description
 
+**TODO: change the code so that HTTP responses are added to list and disposed in driver.**
+
 One description of the driver pattern can be found at http://leitner.io/2015/11/14/driver-pattern-empowers-your-specflow-step-definitions/. It's a description of the pattern for UI testing under SpecFlow framework.
 
 The funny thing is that I probably discovered the pattern separately as I've been using it since ca. 2014 and definitely not for GUI (although surprisingly, I can agree with many of the things written in the mentioned blog post). My discovery of the driver pattern came probably from melting two concepts from the Growing Object-Oriented Software Guided By Tests book, where end-to-end automation revolved around two classes - `ApplicationRunner` and `AuctionSniperDriver`.
@@ -404,11 +406,16 @@ public record WeatherForecastReportBuilder
 }
 ```
 
-This time, however, it does not accept
+This time, however, it does not accept `TenantId` and `UserId` but has some values defined. This means that if we need to preserve these two values across several requests, the test body must supply them every time to the external builders.
 
-Still, the last response is held inside
+If we can pull this off, however, it tends to simplify the driver (at the expense of test body, but it's often a good trade-off because we have other ways of simplifying the test body - coming shortly).
 
-## Externalized context management (??)
+So the driver does not have to remember the reported forecasts anymore, but it still remembers the responses to reports. We can externalize that knowledge as well.
+
+## Externalized forecast report response management
+
+After pushing the responsibility of holding the responses from drive to the test, we get something like this:
+
 
 ```csharp
 private static WeatherForecastReportBuilder ForecastReport() => new();
@@ -435,31 +442,6 @@ public async Task ShouldAllowRetrievingReportedForecast()
 }
 
 [Fact]
-public async Task ShouldAllowRetrievingReportsFromAParticularUser()
-{
-  //GIVEN
-  var userId1 = Any.String();
-  var userId2 = Any.String();
-  var tenantId1 = Any.String();
-  var tenantId2 = Any.String();
-  await using var driver = new AppDriver();
-  await driver.StartAsync();
-  var user1Forecast1 = ForecastReport() with {UserId = userId1, TenantId = tenantId1};
-  var user1Forecast2 = ForecastReport() with {UserId = userId1, TenantId = tenantId1};
-  var user2Forecast = ForecastReport() with {UserId = userId2, TenantId = tenantId2};
-
-  using var responseForUser1Forecast1 = await driver.WeatherForecastApi.Report(user1Forecast1);
-  using var responseForUser1Forecast2 = await driver.WeatherForecastApi.Report(user1Forecast2);
-  using var responseForUser2Forecast = await driver.WeatherForecastApi.Report(user2Forecast);
-
-  //WHEN
-  using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecastsFrom(userId1, tenantId1);
-
-  //THEN
-  await retrievedForecast.ShouldConsistOf(user1Forecast1, user1Forecast2);
-}
-
-[Fact]
 public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
 {
   //GIVEN
@@ -476,11 +458,51 @@ public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessTha
 }
 ```
 
-We can now automate multiple users without leaving garbage, but tests can be verbose
+This further simplifies the driver, but some tests can now become quite verbose. Look at the following test which says that when a user retrieves his reported forecasts, it should only contain the ones he reported and not ones that other users reported:
+
+```csharp
+[Fact]
+public async Task ShouldAllowRetrievingReportsFromAParticularUser()
+{
+  //GIVEN
+  var userId1 = Any.String();
+  var userId2 = Any.String();
+  var tenantId1 = Any.String();
+  var tenantId2 = Any.String();
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  var user1Forecast1 = ForecastReport() 
+    with {UserId = userId1, TenantId = tenantId1};
+  var user1Forecast2 = ForecastReport() 
+    with {UserId = userId1, TenantId = tenantId1};
+  var user2Forecast = ForecastReport() 
+    with {UserId = userId2, TenantId = tenantId2};
+
+  using var responseForUser1Forecast1 
+    = await driver.WeatherForecastApi.Report(user1Forecast1);
+  using var responseForUser1Forecast2 
+    = await driver.WeatherForecastApi.Report(user1Forecast2);
+  using var responseForUser2Forecast 
+    = await driver.WeatherForecastApi.Report(user2Forecast);
+
+  //WHEN
+  using var retrievedForecast = 
+    await driver.WeatherForecastApi.GetReportedForecastsFrom(userId1, tenantId1);
+
+  //THEN
+  await retrievedForecast.ShouldConsistOf(user1Forecast1, user1Forecast2);
+}
+```
+
+Let's try to get rid of some verbosity.
 
 ## Introducing actors
 
-Actors in the sense of Screenplay pattern, not in "actor model" sense.
+Here, I mean actors in the sense of [Screenplay pattern](https://www.infoq.com/articles/Beyond-Page-Objects-Test-Automation-Serenity-Screenplay/), not in the "actor model" sense.
+
+As in our application a unit of isolation is "user", I will introduce a special class called `User` that holds the user context and can interact with the driver.
+
+Here's how my tests look like after introducing the `User` actor:
 
 ```csharp
 [Fact]
@@ -504,6 +526,24 @@ public async Task ShouldAllowRetrievingReportedForecast()
 }
 
 [Fact]
+public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsBelowAllowedMinimum()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  using var user = new User(driver);
+
+  //WHEN
+  using var reportForecastResponse = 
+    await user.AttemptToReportNewForecast(
+      forecast => forecast with {TemperatureC = -101});
+
+  //THEN
+  reportForecastResponse.ShouldBeRejectedAsBadRequest();
+  driver.Notifications.ShouldNotIncludeAnything();
+}
+
+[Fact]
 public async Task ShouldAllowRetrievingReportsFromAParticularUser()
 {
   //GIVEN
@@ -517,37 +557,22 @@ public async Task ShouldAllowRetrievingReportsFromAParticularUser()
   await user2.ReportNewForecast();
 
   //WHEN
-  using var allForecastsReportedByUser1 = await user1.RetrieveAllReportedForecasts();
+  using var allForecastsReportedByUser1 = 
+    await user1.RetrieveAllReportedForecasts();
 
   //THEN
   await allForecastsReportedByUser1.ShouldConsistOf(user1.AllReportedForecasts());
 }
-
-[Fact]
-public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsBelowAllowedMinimum()
-{
-  //GIVEN
-  await using var driver = new AppDriver();
-  await driver.StartAsync();
-  using var user = new User(driver);
-
-  //WHEN
-  using var reportForecastResponse = 
-    await user.AttemptToReportNewForecast(forecast => forecast with {TemperatureC = -101});
-
-  //THEN
-  reportForecastResponse.ShouldBeRejectedAsBadRequest();
-  driver.Notifications.ShouldNotIncludeAnything();
-}
 ```
 
-RetrieveAll... and All.. could use some work.
+While the naming could be improved (a reader might be confused about e.g. `RetrieveAllReportedForecasts` vs `AllReportedForecasts`), I hope you get the idea.
 
-Remember, this is a pattern. No canonical implementation.
+This form of driver pattern with actors is typically the ultimate form I arrive at when a piece of code I maintain grows for a longer period of time. Every time I add new tests I refactor the automation layer to make it more "domain-oriented" and flexible at the same time.
 
-TODO: links to each source file
-TODO: page object
-TODO: at which level is this pattern useful?
-TODO describe production code - notification is sent via HTTP
-TODO: links to existing posts on the driver pattern.
-TODO: change the code so that HTTP responses are added to list and disposed in driver.
+# Advantages
+
+The biggest advantage is that it brings the test very close to a statement of intention - when done well, driver pattern removes a lot of noise from the test body. This may improve readability of the tests and (at some point) the ability to create new scenarios without digging through a lot of low-level code.
+
+# Disadvantages
+
+I guess the biggest disadvantage of the pattern is that a lot of complexity is pushed into the driver, so care needs to be taken to not make it an overcomplicated mess. Also, advanced fluent API design skills help, because it's now always obvious which evolution path would be the best for a driver, so having more options is always useful.
