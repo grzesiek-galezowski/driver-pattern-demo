@@ -29,7 +29,7 @@ I used this pattern in C# and Java, but suspect it can be used in others.
 Through discussion with some good souls who acknowledged that the patterns is not overly popular and well-known and who encouraged me to write something about it, I decided to put together this article, documenting how I understand, use and evolve my drivers.
 
 > ### Note
-> All the code in this folder is companion content to this article. The article does not discuss every part of the sample code. I encourage you to inspect it and play with it in your IDE of choice.
+> All the code in this folder is companion content to this article. The article does not discuss every part of the sample code. I encourage you to inspect it and play with it in your IDE.
 
 # Examples
 
@@ -142,7 +142,7 @@ public async Task ShouldAllowRetrievingReportedForecast()
   var inputForecastDto = new WeatherForecastDto(
     tenantId, 
     userId, 
-    Any.Instance<DateTime>(),
+    Any.DateTime(),
     Any.Integer(),
     Any.String());
   using var host = Host
@@ -284,7 +284,7 @@ Here, I am passing a lambda inside which I can customize a builder for a weather
 ```csharp
 public record WeatherForecastReportBuilder(string UserId, string TenantId)
 {
-  public DateTime Time { private get; init; } = Any.Instance<DateTime>();
+  public DateTime Time { private get; init; } = Any.DateTime();
   public int TemperatureC { private get; init; } = Any.Integer();
   public string Summary { private get; init; } = Any.String();
 
