@@ -17,8 +17,8 @@ So far, I was able to use the driver pattern to automate the following kinds of 
 
 Also, I was able to use it when writing the following kinds of apps:
 
-* Console utilities (in both end-to-end and application logic tests)
-* WPF Gui application (although only in application logic tests)
+* Console utilities (in both [end-to-end](https://github.com/grzesiek-galezowski/nscan/tree/master/src/NScanSpecification.E2E) and [application logic](https://github.com/grzesiek-galezowski/nscan/tree/master/src/NScanSpecification.Component) tests)
+* WPF Gui application ([Example 1](https://github.com/grzesiek-galezowski/component-based-test-tool/tree/master/ComponentBasedTestTool/ComponentSpecification), [ Example 2](https://github.com/grzesiek-galezowski/artifact-notification/tree/master/ArtifactNotificationSpecification/Specification)) (although only in application logic tests)
 * ASP.Net Core Web API applications
 
 I used this pattern in C# and Java, but suspect it can be used in others.
