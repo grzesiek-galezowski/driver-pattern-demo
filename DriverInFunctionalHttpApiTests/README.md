@@ -52,6 +52,7 @@ Some words of caution before we move on:
 * In the production part, neither the code nor the API is pretty. The production part of this sample does not aim to demonstrate how to design good web APIs or services or classes. It is made only to serve as something executable for the tests.
 * In one of the example tests, I added a check that isn't really part of the scenario. The purpose is only to decrease the volume of code for easier digestion, nothing more.
 * The examples show an evolution process. The first example is by far not perfect and the final one still has some stuff that can be improved.
+* Driver is a pattern. There is no "one true way" of implementing it, but rather a set of common characteristics and common problem the different implementations attempt to solve. Thus, if your driver needs to be different than the one presented here, it doesn't mean it's bad implementation. It might be that the forces playing out in your product make you go in a slightly different direction.
 * I am not claiming that the driver pattern is the best way to automate tests. I am still learning, so everything written here is provided as a sort of RFC.
 
 ## [Production code](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/DriverPatternDemo/Controllers/WeatherForecastController.cs)
