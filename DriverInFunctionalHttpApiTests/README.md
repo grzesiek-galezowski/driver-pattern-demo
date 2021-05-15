@@ -28,11 +28,13 @@ I used this pattern in C# and Java, but suspect it can be used in others.
 
 ## Driver pattern - advantages
 
-The biggest advantage is that it brings the test very close to a statement of intention - when done well, driver pattern removes a lot of noise from the test body. This may improve readability of the tests and (at some point) the ability to create new scenarios without digging through a lot of low-level code.
+* The biggest advantage is that it brings the test very close to a statement of intention - when done well, driver pattern removes a lot of noise from the test body. This may improve readability of the tests and (at some point) the ability to create new scenarios without digging through a lot of low-level code.
+* Driver provides an alternative to a TestBase approach, which I personally find usually ends up as unstructured and coincidence-driven trash bin for stuff the team wants out of the test body.
 
 ## Driver pattern - disadvantages
 
-I guess the biggest disadvantage of the pattern is that a lot of complexity is pushed into the driver, so care needs to be taken to not make it an overcomplicated mess. Also, advanced fluent API design skills help, because it's not always obvious which evolution path would be the best for a driver, so having more options is always useful.
+* I guess the biggest disadvantage of the pattern is that a lot of complexity is pushed into the driver, so care needs to be taken to not make it an overcomplicated mess. Also, advanced fluent API design skills help, because it's not always obvious which evolution path would be the best for a driver, so having more options is always useful.
+* When complexity is moved from tests to driver, it sometimes has to be generalized to fit a general use case. This may make the mechanisms even more complex (as they need to be general) and harder to understand.
 
 ## Why this article?
 
