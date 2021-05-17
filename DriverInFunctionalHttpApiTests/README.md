@@ -581,4 +581,132 @@ While the naming could be improved (a reader might be confused about e.g. `Retri
 
 This form of driver pattern with actors is typically the ultimate form I arrive at when a piece of code I maintain grows for a longer period of time. Every time I add new tests I refactor the automation layer to make it more "domain-oriented" and flexible at the same time.
 
+## [Getting rid of all but one the `using` with Automated Teardown pattern](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/FunctionalSpecification/_07_DriverCustomizableWithActorsAndRegistrationList/E2eSpecification.cs)
+
+The XUnit Test Patterns book describes an [Automated Teardown](http://xunitpatterns.com/Automated%20Teardown.html) pattern that can be used to eliminate many of the `Dispose` calls in the test (and in the actors as well).
+
+We can define the following class to hold and dispose all of our `IDisposable`s:
+
+```csharp
+public class Disposables : IDisposable
+{
+  private readonly List<IDisposable> _disposables = new();
+
+  public void Add(IDisposable disposable)
+  {
+    _disposables.Add(disposable);
+  }
+
+  public void Dispose()
+  {
+    foreach (var disposable in _disposables)
+    {
+      // in real-life scenario, wrapping the line below in a try-catch
+      // would help ensure all disposables are disposed of.
+      disposable.Dispose();
+    }
+  }
+}
+```
+
+Then, we can create an instance in the driver:
+
+```csharp
+private readonly Disposables _disposables = new();
+```
+
+and dispose of it in the driver's `Dispose()`:
+
+```csharp
+public async ValueTask DisposeAsync()
+{
+  await _host.DoAsync(async host =>
+  {
+    await host.StopAsync();
+    host.Dispose();
+  });
+  _disposables.Dispose();
+}
+```
+
+Now, every time we create something that's disposable, we register it to the `Disposables` instance owned by the driver, e.g.
+
+```csharp
+var httpResponse = await _httpClient
+  .Request("WeatherForecast")
+  .AllowAnyHttpStatus()
+  .PostJsonAsync(builder.Build());
+
+//////////////////////
+_disposables.Add(httpResponse);
+//////////////////////
+
+return httpResponse;
+```
+
+Now, the tests don't need to dispose of anything but the driver itself, so they can be a bit simpler:
+
+```csharp
+[Fact]
+public async Task ShouldAllowRetrievingReportedForecast()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  var user = new User(driver);
+
+  await user.ReportNewForecast();
+
+  //WHEN
+  var retrievedForecast = await user.RetrieveLastReportedForecast();
+
+  //THEN
+  await retrievedForecast.ShouldBeTheSameAs(user.LastReportedForecast());
+
+  //not really part of the scenario...
+  driver.Notifications.ShouldIncludeNotificationAbout(user.LastReportedForecast());
+}
+
+[Fact]
+public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsBelowAllowedMinimum()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  var user = new User(driver);
+
+  //WHEN
+  var reportForecastResponse = 
+    await user.AttemptToReportNewForecast(
+      forecast => forecast with {TemperatureC = -101});
+
+  //THEN
+  reportForecastResponse.ShouldBeRejectedAsBadRequest();
+  driver.Notifications.ShouldNotIncludeAnything();
+}
+
+[Fact]
+public async Task ShouldAllowRetrievingReportsFromAParticularUser()
+{
+  //GIVEN
+  await using var driver = new AppDriver();
+  await driver.StartAsync();
+  var user1 = new User(driver);
+  var user2 = new User(driver);
+
+  user1.ReportNewForecast();
+  user1.ReportNewForecast();
+  user2.ReportNewForecast();
+
+  //WHEN
+  var allForecastsReportedByUser1 = 
+    await user1.RetrieveAllReportedForecasts();
+
+  //THEN
+  await allForecastsReportedByUser1.ShouldConsistOf(user1.AllReportedForecasts());
+}
+```
+
+The Automated Teardown pattern can also be applied to all the examples in this repository, not only the one using actors.
+
 This concludes my set of examples.
