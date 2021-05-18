@@ -644,7 +644,7 @@ _disposables.Add(httpResponse);
 return httpResponse;
 ```
 
-Now, the tests don't need to dispose of anything but the driver itself, so they can be a bit simpler:
+As a result, the tests don't need to dispose of anything but the driver itself, so they can be a bit simpler:
 
 ```csharp
 [Fact]
