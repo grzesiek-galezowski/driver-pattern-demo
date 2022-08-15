@@ -12,7 +12,7 @@ So far, I was able to use the driver pattern to automate the following kinds of 
 
 * End-to-end tests
 * TestHost-based ASP.Net Core tests
-* Application logic tests (in terms of hexagonal architecture - tests that test the inner hexagon with real adapters replaced by test adapters)
+* Application logic tests (in terms of hexagonal architecture - tests that test the hexagon with real adapters replaced by test adapters)
 * Adapter tests (in terms of hexagonal architecture)
 
 Also, I was able to use it when writing the following kinds of apps:
