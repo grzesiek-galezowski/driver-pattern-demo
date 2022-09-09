@@ -1,6 +1,5 @@
 ﻿using System;
 
-namespace DriverPatternDemo
-{
-  public record ForecastCreationResultDto(Guid Id) { }
-}
+namespace DriverPatternDemo;
+
+public record ForecastCreationResultDto(Guid Id);

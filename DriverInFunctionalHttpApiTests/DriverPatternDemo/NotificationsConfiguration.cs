@@ -1,7 +1,6 @@
-namespace DriverPatternDemo
+namespace DriverPatternDemo;
+
+public record NotificationsConfiguration
 {
-  public record NotificationsConfiguration
-  {
-    public string BaseUrl { init; get; }
-  }
+  public string BaseUrl { init; get; }
 }

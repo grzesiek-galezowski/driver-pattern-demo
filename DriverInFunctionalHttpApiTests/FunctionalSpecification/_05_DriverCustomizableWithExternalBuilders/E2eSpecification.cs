@@ -22,258 +22,257 @@ using WireMock.Server;
 using Xunit;
 using static TddXt.AnyRoot.Root;
 
-namespace FunctionalSpecification._05_DriverCustomizableWithExternalBuilders
+namespace FunctionalSpecification._05_DriverCustomizableWithExternalBuilders;
+
+public class E2ESpecification
 {
-  public class E2ESpecification
+  private static WeatherForecastReportBuilder ForecastReport() => new();
+
+  [Fact]
+  public async Task ShouldAllowRetrievingReportedForecast()
   {
-    private static WeatherForecastReportBuilder ForecastReport() => new();
+    //GIVEN
+    await using var driver = new AppDriver();
+    await driver.StartAsync();
+    var weatherForecast = ForecastReport();
 
-    [Fact]
-    public async Task ShouldAllowRetrievingReportedForecast()
-    {
-      //GIVEN
-      await using var driver = new AppDriver();
-      await driver.StartAsync();
-      var weatherForecast = ForecastReport();
+    await driver.WeatherForecastApi.Report(weatherForecast);
 
-      await driver.WeatherForecastApi.Report(weatherForecast);
+    //WHEN
+    using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecast();
 
-      //WHEN
-      using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecast();
+    //THEN
+    await retrievedForecast.ShouldBeTheSameAs(weatherForecast);
 
-      //THEN
-      await retrievedForecast.ShouldBeTheSameAs(weatherForecast);
-
-      //not really part of the scenario...
-      driver.Notifications.ShouldIncludeNotificationAbout(weatherForecast);
-    }
-
-    [Fact]
-    public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
-    {
-      //GIVEN
-      await using var driver = new AppDriver();
-      await driver.StartAsync();
-
-      //WHEN
-      using var reportForecastResponse = await driver.WeatherForecastApi
-        .AttemptToReportForecast(ForecastReport() with {TemperatureC = -101});
-
-      //THEN
-      reportForecastResponse.ShouldBeRejectedAsBadRequest();
-      driver.Notifications.ShouldNotIncludeAnything();
-    }
+    //not really part of the scenario...
+    driver.Notifications.ShouldIncludeNotificationAbout(weatherForecast);
   }
 
-  //Two deficiencies of this driver:
-  //1) _lastOutput lifetime is managed internally
-  //2) so issue with more than one "entity"
-
-  public class AppDriver : IAsyncDisposable, IAppDriverContext
+  [Fact]
+  public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
   {
-    private Maybe<IHost> _host;
-    private Maybe<ForecastCreationResultDto> _lastReportResult; //not pretty
-    private readonly WireMockServer _notificationRecipient;
+    //GIVEN
+    await using var driver = new AppDriver();
+    await driver.StartAsync();
 
-    private FlurlClient HttpClient => new(_host.Value.GetTestClient());
+    //WHEN
+    using var reportForecastResponse = await driver.WeatherForecastApi
+      .AttemptToReportForecast(ForecastReport() with {TemperatureC = -101});
 
-    public AppDriver()
-    {
-      _notificationRecipient = WireMockServer.Start();
-    }
+    //THEN
+    reportForecastResponse.ShouldBeRejectedAsBadRequest();
+    driver.Notifications.ShouldNotIncludeAnything();
+  }
+}
 
-    public async Task StartAsync()
-    {
-      _notificationRecipient.Given(
-        Request.Create()
-          .WithPath("/notifications")
-          .UsingPost()).RespondWith(
-        Response.Create()
-          .WithStatusCode(HttpStatusCode.OK));
+//Two deficiencies of this driver:
+//1) _lastOutput lifetime is managed internally
+//2) so issue with more than one "entity"
 
-      _host = Host
-        .CreateDefaultBuilder()
-        .ConfigureWebHostDefaults(webBuilder =>
-        {
-          webBuilder
-            .UseTestServer()
-            .ConfigureAppConfiguration(appConfig =>
-            {
-              appConfig.AddInMemoryCollection(new Dictionary<string, string>
-              {
-                ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
-              });
-            })
-            .UseEnvironment("Development")
-            .UseStartup<Startup>();
-        }).Build().Just();
-      await _host.Value.StartAsync();
-    }
+public class AppDriver : IAsyncDisposable, IAppDriverContext
+{
+  private Maybe<IHost> _host;
+  private Maybe<ForecastCreationResultDto> _lastReportResult; //not pretty
+  private readonly WireMockServer _notificationRecipient;
 
-    //Note explicit implementation
-    void IAppDriverContext.SaveAsLastForecastReportResult(ForecastCreationResultDto dto)
-    {
-      _lastReportResult = dto.Just();
-    }
+  private FlurlClient HttpClient => new(_host.Value.GetTestClient());
 
-    public async ValueTask DisposeAsync()
-    {
-      await _host.DoAsync(async host =>
+  public AppDriver()
+  {
+    _notificationRecipient = WireMockServer.Start();
+  }
+
+  public async Task StartAsync()
+  {
+    _notificationRecipient.Given(
+      Request.Create()
+        .WithPath("/notifications")
+        .UsingPost()).RespondWith(
+      Response.Create()
+        .WithStatusCode(HttpStatusCode.OK));
+
+    _host = Host
+      .CreateDefaultBuilder()
+      .ConfigureWebHostDefaults(webBuilder =>
       {
-        await host.StopAsync();
-        host.Dispose();
-      });
-      _notificationRecipient.Dispose();
-    }
-
-    public NotificationsDriverExtension Notifications =>
-      new(_notificationRecipient);
-
-    public WeatherForecastApiDriverExtension WeatherForecastApi
-      => new(this, HttpClient, _lastReportResult);
+        webBuilder
+          .UseTestServer()
+          .ConfigureAppConfiguration(appConfig =>
+          {
+            appConfig.AddInMemoryCollection(new Dictionary<string, string>
+            {
+              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
+            });
+          })
+          .UseEnvironment("Development")
+          .UseStartup<Startup>();
+      }).Build().Just();
+    await _host.Value.StartAsync();
   }
 
-  public class NotificationsDriverExtension
+  //Note explicit implementation
+  void IAppDriverContext.SaveAsLastForecastReportResult(ForecastCreationResultDto dto)
   {
-    private readonly WireMockServer _wireMockServer;
-
-    public NotificationsDriverExtension(WireMockServer wireMockServer)
-    {
-      _wireMockServer = wireMockServer;
-    }
-
-    public void ShouldIncludeNotificationAbout(WeatherForecastReportBuilder builder)
-    {
-      var dto = builder.Build();
-      _wireMockServer.LogEntries.Should().ContainSingle(entry =>
-        entry.RequestMatchResult.IsPerfectMatch
-        && entry.RequestMessage.Path == "/notifications"
-        && entry.RequestMessage.Method == "POST"
-        && JsonConvert.DeserializeObject<WeatherForecastSuccessfullyReportedEventDto>(
-          entry.RequestMessage.Body) == new WeatherForecastSuccessfullyReportedEventDto(
-          dto.TenantId,
-          dto.UserId,
-          dto.TemperatureC));
-    }
-
-    public void ShouldNotIncludeAnything()
-    {
-      _wireMockServer.LogEntries.Should().BeEmpty();
-    }
+    _lastReportResult = dto.Just();
   }
 
-  public interface IAppDriverContext
+  public async ValueTask DisposeAsync()
   {
-    void SaveAsLastForecastReportResult(ForecastCreationResultDto jsonResponse);
+    await _host.DoAsync(async host =>
+    {
+      await host.StopAsync();
+      host.Dispose();
+    });
+    _notificationRecipient.Dispose();
   }
 
-  public class WeatherForecastApiDriverExtension
+  public NotificationsDriverExtension Notifications =>
+    new(_notificationRecipient);
+
+  public WeatherForecastApiDriverExtension WeatherForecastApi
+    => new(this, HttpClient, _lastReportResult);
+}
+
+public class NotificationsDriverExtension
+{
+  private readonly WireMockServer _wireMockServer;
+
+  public NotificationsDriverExtension(WireMockServer wireMockServer)
   {
-    private readonly IFlurlClient _httpClient;
-    private readonly Maybe<ForecastCreationResultDto> _lastReportResult;
-    private readonly IAppDriverContext _driverContext;
-
-    public WeatherForecastApiDriverExtension(
-      IAppDriverContext driverContext,
-      IFlurlClient httpClient,
-      Maybe<ForecastCreationResultDto> lastReportResult)
-    {
-      _driverContext = driverContext;
-      _httpClient = httpClient;
-      _lastReportResult = lastReportResult;
-    }
-
-    public async Task Report(WeatherForecastReportBuilder weatherForecastDto)
-    {
-      var httpResponse = await AttemptToReportForecastViaHttp(weatherForecastDto);
-      var jsonResponse = await httpResponse.GetJsonAsync<ForecastCreationResultDto>();
-      _driverContext.SaveAsLastForecastReportResult(jsonResponse);
-    }
-
-    public async Task<ReportForecastResponse> AttemptToReportForecast(WeatherForecastReportBuilder builder)
-    {
-      var httpResponse = await AttemptToReportForecastViaHttp(builder);
-      return new ReportForecastResponse(httpResponse);
-    }
-
-    private async Task<IFlurlResponse> AttemptToReportForecastViaHttp(WeatherForecastReportBuilder builder)
-    {
-      var httpResponse = await _httpClient
-        .Request("WeatherForecast")
-        .AllowAnyHttpStatus()
-        .PostJsonAsync(builder.Build());
-      return httpResponse;
-    }
-
-    public async Task<RetrievedForecast> GetReportedForecast()
-    {
-      var httpResponse = await _httpClient.Request("WeatherForecast")
-        .AppendPathSegment(_lastReportResult.Value.Id)
-        .AllowAnyHttpStatus()
-        .GetAsync();
-
-      return new RetrievedForecast(httpResponse);
-    }
+    _wireMockServer = wireMockServer;
   }
 
-  public class ReportForecastResponse : IDisposable
+  public void ShouldIncludeNotificationAbout(WeatherForecastReportBuilder builder)
   {
-    private readonly IFlurlResponse _httpResponse;
-
-    public ReportForecastResponse(IFlurlResponse httpResponse)
-    {
-      _httpResponse = httpResponse;
-    }
-
-    public void Dispose()
-    {
-      _httpResponse.Dispose();
-    }
-
-    public void ShouldBeRejectedAsBadRequest()
-    {
-      _httpResponse.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
-    }
+    var dto = builder.Build();
+    _wireMockServer.LogEntries.Should().ContainSingle(entry =>
+      entry.RequestMatchResult.IsPerfectMatch
+      && entry.RequestMessage.Path == "/notifications"
+      && entry.RequestMessage.Method == "POST"
+      && JsonConvert.DeserializeObject<WeatherForecastSuccessfullyReportedEventDto>(
+        entry.RequestMessage.Body) == new WeatherForecastSuccessfullyReportedEventDto(
+        dto.TenantId,
+        dto.UserId,
+        dto.TemperatureC));
   }
 
-  public class RetrievedForecast : IDisposable
+  public void ShouldNotIncludeAnything()
   {
-    private readonly IFlurlResponse _httpResponse;
+    _wireMockServer.LogEntries.Should().BeEmpty();
+  }
+}
 
-    public RetrievedForecast(IFlurlResponse httpResponse)
-    {
-      _httpResponse = httpResponse;
-    }
+public interface IAppDriverContext
+{
+  void SaveAsLastForecastReportResult(ForecastCreationResultDto jsonResponse);
+}
 
-    public async Task ShouldBeTheSameAs(WeatherForecastReportBuilder expectedBuilder)
-    {
-      _httpResponse.StatusCode.Should().Be((int) HttpStatusCode.OK);
-      var weatherForecastDto = await _httpResponse.GetJsonAsync<WeatherForecastDto>();
-      weatherForecastDto.Should().BeEquivalentTo(expectedBuilder.Build());
-    }
+public class WeatherForecastApiDriverExtension
+{
+  private readonly IFlurlClient _httpClient;
+  private readonly Maybe<ForecastCreationResultDto> _lastReportResult;
+  private readonly IAppDriverContext _driverContext;
 
-    public void Dispose()
-    {
-      _httpResponse.Dispose();
-    }
+  public WeatherForecastApiDriverExtension(
+    IAppDriverContext driverContext,
+    IFlurlClient httpClient,
+    Maybe<ForecastCreationResultDto> lastReportResult)
+  {
+    _driverContext = driverContext;
+    _httpClient = httpClient;
+    _lastReportResult = lastReportResult;
   }
 
-  public record WeatherForecastReportBuilder
+  public async Task Report(WeatherForecastReportBuilder weatherForecastDto)
   {
-    public string TenantId { private get; init; } = Any.String();
-    public string UserId { private get; init; } = Any.String();
-    public DateTime Time { private get; init; } = Any.DateTime();
-    public int TemperatureC { private get; init; } = Any.Integer();
-    public string Summary { private get; init; } = Any.String();
+    var httpResponse = await AttemptToReportForecastViaHttp(weatherForecastDto);
+    var jsonResponse = await httpResponse.GetJsonAsync<ForecastCreationResultDto>();
+    _driverContext.SaveAsLastForecastReportResult(jsonResponse);
+  }
 
-    public WeatherForecastDto Build()
-    {
-      return new(
-        TenantId, 
-        UserId, 
-        Time,
-        TemperatureC,
-        Summary);
-    }
+  public async Task<ReportForecastResponse> AttemptToReportForecast(WeatherForecastReportBuilder builder)
+  {
+    var httpResponse = await AttemptToReportForecastViaHttp(builder);
+    return new ReportForecastResponse(httpResponse);
+  }
+
+  private async Task<IFlurlResponse> AttemptToReportForecastViaHttp(WeatherForecastReportBuilder builder)
+  {
+    var httpResponse = await _httpClient
+      .Request("WeatherForecast")
+      .AllowAnyHttpStatus()
+      .PostJsonAsync(builder.Build());
+    return httpResponse;
+  }
+
+  public async Task<RetrievedForecast> GetReportedForecast()
+  {
+    var httpResponse = await _httpClient.Request("WeatherForecast")
+      .AppendPathSegment(_lastReportResult.Value.Id)
+      .AllowAnyHttpStatus()
+      .GetAsync();
+
+    return new RetrievedForecast(httpResponse);
+  }
+}
+
+public class ReportForecastResponse : IDisposable
+{
+  private readonly IFlurlResponse _httpResponse;
+
+  public ReportForecastResponse(IFlurlResponse httpResponse)
+  {
+    _httpResponse = httpResponse;
+  }
+
+  public void Dispose()
+  {
+    _httpResponse.Dispose();
+  }
+
+  public void ShouldBeRejectedAsBadRequest()
+  {
+    _httpResponse.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
+  }
+}
+
+public class RetrievedForecast : IDisposable
+{
+  private readonly IFlurlResponse _httpResponse;
+
+  public RetrievedForecast(IFlurlResponse httpResponse)
+  {
+    _httpResponse = httpResponse;
+  }
+
+  public async Task ShouldBeTheSameAs(WeatherForecastReportBuilder expectedBuilder)
+  {
+    _httpResponse.StatusCode.Should().Be((int) HttpStatusCode.OK);
+    var weatherForecastDto = await _httpResponse.GetJsonAsync<WeatherForecastDto>();
+    weatherForecastDto.Should().BeEquivalentTo(expectedBuilder.Build());
+  }
+
+  public void Dispose()
+  {
+    _httpResponse.Dispose();
+  }
+}
+
+public record WeatherForecastReportBuilder
+{
+  public string TenantId { private get; init; } = Any.String();
+  public string UserId { private get; init; } = Any.String();
+  public DateTime Time { private get; init; } = Any.DateTime();
+  public int TemperatureC { private get; init; } = Any.Integer();
+  public string Summary { private get; init; } = Any.String();
+
+  public WeatherForecastDto Build()
+  {
+    return new(
+      TenantId, 
+      UserId, 
+      Time,
+      TemperatureC,
+      Summary);
   }
 }
