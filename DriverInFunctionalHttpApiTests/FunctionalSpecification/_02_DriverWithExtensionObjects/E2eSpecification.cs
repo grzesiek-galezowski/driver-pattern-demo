@@ -9,9 +9,9 @@ using Flurl.Http;
 using Functional.Maybe;
 using Functional.Maybe.Just;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using TddXt.AnyRoot.Numbers;
 using TddXt.AnyRoot.Strings;
@@ -53,18 +53,31 @@ public class E2ESpecification
 
 public class AppDriver : IAsyncDisposable, IAppDriverContext
 {
-  private Maybe<IHost> _host;
   private Maybe<ForecastCreationResultDto> _lastReportResult; //not pretty
   private Maybe<WeatherForecastDto> _lastInputForecastDto; //not pretty
   private readonly string _tenantId = Any.String();
   private readonly string _userId = Any.String();
   private readonly WireMockServer _notificationRecipient;
+  private readonly WebApplicationFactory<Program> _webApplicationFactory;
 
-  private FlurlClient HttpClient => new(_host.Value.GetTestClient());
+  private FlurlClient HttpClient => new(_webApplicationFactory.CreateClient());
 
   public AppDriver()
   {
     _notificationRecipient = WireMockServer.Start();
+    _webApplicationFactory = new WebApplicationFactory<Program>()
+      .WithWebHostBuilder(webBuilder =>
+        webBuilder
+          .UseTestServer()
+          .ConfigureAppConfiguration(appConfig =>
+          {
+            appConfig.AddInMemoryCollection(new Dictionary<string, string>
+            {
+              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
+            });
+          })
+          .UseEnvironment("Development")
+      );
   }
 
   public async Task StartAsync()
@@ -76,23 +89,7 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
       Response.Create()
         .WithStatusCode(HttpStatusCode.OK));
 
-    _host = Host
-      .CreateDefaultBuilder()
-      .ConfigureWebHostDefaults(webBuilder =>
-      {
-        webBuilder
-          .UseTestServer()
-          .ConfigureAppConfiguration(appConfig =>
-          {
-            appConfig.AddInMemoryCollection(new Dictionary<string, string>
-            {
-              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
-            });
-          })
-          .UseEnvironment("Development")
-          .UseStartup<Startup>();
-      }).Build().Just();
-    await _host.Value.StartAsync();
+    ForceStart();
   }
 
   //Note explicit implementation
@@ -109,19 +106,25 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
 
   public async ValueTask DisposeAsync()
   {
-    await _host.DoAsync(async host =>
-    {
-      await host.StopAsync();
-      host.Dispose();
-    });
+    await _webApplicationFactory.DisposeAsync();
     _notificationRecipient.Dispose();
   }
 
   public NotificationsDriverExtension Notifications =>
-    new(_userId, _tenantId, _notificationRecipient, _lastInputForecastDto.Value);
+    new(_userId,
+      _tenantId,
+      _notificationRecipient,
+      _lastInputForecastDto.Value);
 
-  public WeatherForecastApiDriverExtension WeatherForecastApi 
-    => new(this, _tenantId, _userId, HttpClient, _lastReportResult, _lastInputForecastDto);
+  public WeatherForecastApiDriverExtension WeatherForecastApi =>
+    new(this,
+      _tenantId,
+      _userId,
+      HttpClient,
+      _lastReportResult,
+      _lastInputForecastDto);
+
+  private void ForceStart() => _ = HttpClient;
 }
 
 public class NotificationsDriverExtension
@@ -131,7 +134,11 @@ public class NotificationsDriverExtension
   private readonly string _tenantId;
   private readonly string _userId;
 
-  public NotificationsDriverExtension(string userId, string tenantId, WireMockServer wireMockServer, WeatherForecastDto weatherForecastDto)
+  public NotificationsDriverExtension(
+    string userId,
+    string tenantId,
+    WireMockServer wireMockServer,
+    WeatherForecastDto weatherForecastDto)
   {
     _userId = userId;
     _tenantId = tenantId;

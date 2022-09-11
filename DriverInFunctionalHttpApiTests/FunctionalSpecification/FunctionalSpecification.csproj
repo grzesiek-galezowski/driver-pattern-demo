@@ -18,6 +18,7 @@
     <PackageReference Include="Flurl.Http" Version="3.2.4" />
     <PackageReference Include="Functional.Maybe" Version="2.0.20" />
     <PackageReference Include="Functional.Maybe.Just" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="6.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="6.0.8" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.1" />
     <PackageReference Include="WireMock.Net" Version="1.5.5" />

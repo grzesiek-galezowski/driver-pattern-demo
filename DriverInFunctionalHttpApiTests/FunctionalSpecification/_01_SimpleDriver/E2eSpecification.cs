@@ -9,9 +9,9 @@ using Flurl.Http;
 using Functional.Maybe;
 using Functional.Maybe.Just;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using TddXt.AnyRoot.Numbers;
 using TddXt.AnyRoot.Strings;
@@ -54,18 +54,31 @@ public class E2ESpecification
 
 public class AppDriver : IAsyncDisposable
 {
-  private Maybe<IHost> _host;
   private Maybe<ForecastCreationResultDto> _lastReportResult; //not pretty
   private Maybe<WeatherForecastDto> _lastInputForecastDto; //not pretty
   private readonly string _tenantId = Any.String();
   private readonly string _userId = Any.String();
   private readonly WireMockServer _notificationRecipient;
+  private readonly WebApplicationFactory<Program> _webApplicationFactory;
 
-  private FlurlClient HttpClient => new(_host.Value.GetTestClient());
+  private FlurlClient HttpClient => new(_webApplicationFactory.CreateClient());
 
   public AppDriver()
   {
     _notificationRecipient = WireMockServer.Start();
+    _webApplicationFactory = new WebApplicationFactory<Program>()
+      .WithWebHostBuilder(webBuilder =>
+        webBuilder
+          .UseTestServer()
+          .ConfigureAppConfiguration(appConfig =>
+          {
+            appConfig.AddInMemoryCollection(new Dictionary<string, string>
+            {
+              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
+            });
+          })
+          .UseEnvironment("Development")
+      );
   }
 
   public async Task StartAsync()
@@ -77,23 +90,7 @@ public class AppDriver : IAsyncDisposable
       Response.Create()
         .WithStatusCode(HttpStatusCode.OK));
 
-    _host = Host
-      .CreateDefaultBuilder()
-      .ConfigureWebHostDefaults(webBuilder =>
-      {
-        webBuilder
-          .UseTestServer()
-          .ConfigureAppConfiguration(appConfig =>
-          {
-            appConfig.AddInMemoryCollection(new Dictionary<string, string>
-            {
-              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
-            });
-          })
-          .UseEnvironment("Development")
-          .UseStartup<Startup>();
-      }).Build().Just();
-    await _host.Value.StartAsync();
+    ForceStart();
   }
 
   public async Task ReportWeatherForecast()
@@ -123,11 +120,7 @@ public class AppDriver : IAsyncDisposable
 
   public async ValueTask DisposeAsync()
   {
-    await _host.DoAsync(async host =>
-    {
-      await host.StopAsync();
-      host.Dispose();
-    });
+    await _webApplicationFactory.DisposeAsync();
     _notificationRecipient.Dispose();
   }
 
@@ -143,6 +136,12 @@ public class AppDriver : IAsyncDisposable
         _userId, 
         _lastInputForecastDto.Value.TemperatureC));
   }
+
+  private void ForceStart()
+  {
+    _ = HttpClient;
+  }
+
 }
 
 public class RetrievedForecast : IDisposable

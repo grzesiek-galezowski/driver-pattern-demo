@@ -6,12 +6,10 @@ using System.Threading.Tasks;
 using DriverPatternDemo;
 using FluentAssertions;
 using Flurl.Http;
-using Functional.Maybe;
-using Functional.Maybe.Just;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using TddXt.AnyRoot.Numbers;
 using TddXt.AnyRoot.Strings;
@@ -97,8 +95,6 @@ public class User
     _driver = driver;
   }
 
-  public static WeatherForecastReportBuilder ForecastReport() => new();
-
   public async Task ReportNewForecast()
   {
     await ReportNewForecast(_ => _);
@@ -148,18 +144,21 @@ public class User
   {
     return _reportedForecasts.Last();
   }
+
+  private static WeatherForecastReportBuilder ForecastReport() => new();
 }
 
-public class Disposables : IDisposable
+public class Disposables
 {
   private readonly List<IDisposable> _disposables = new();
+  private readonly List<IAsyncDisposable> _asyncDisposables = new();
 
-  public void Add(IDisposable disposable)
+  public void AddDisposable(IDisposable disposable)
   {
     _disposables.Add(disposable);
   }
 
-  public void Dispose()
+  public async Task DisposeAsync()
   {
     foreach (var disposable in _disposables)
     {
@@ -167,21 +166,45 @@ public class Disposables : IDisposable
       // would help ensure all disposables are disposed of.
       disposable.Dispose();
     }
+
+    // in real-life scenario, wrapping the line below in a try-catch
+    // would help ensure all disposables are disposed of.
+    await Task.WhenAll(_asyncDisposables.Select(d => d.DisposeAsync().AsTask()));
+  }
+
+  public void AddAsyncDisposable(IAsyncDisposable asyncDisposable)
+  {
+    _asyncDisposables.Add(asyncDisposable);
   }
 }
 
 public class AppDriver : IAsyncDisposable
 {
-  private Maybe<IHost> _host;
   private readonly WireMockServer _notificationRecipient;
   private readonly Disposables _disposables = new();
+  private readonly WebApplicationFactory<Program> _webApplicationFactory;
 
-  private FlurlClient HttpClient => new(_host.Value.GetTestClient());
+  private FlurlClient HttpClient => new(_webApplicationFactory.CreateClient());
 
   public AppDriver()
   {
     _notificationRecipient = WireMockServer.Start();
-    _disposables.Add(_notificationRecipient);
+    _webApplicationFactory = new WebApplicationFactory<Program>()
+      .WithWebHostBuilder(webBuilder =>
+        webBuilder
+          .UseTestServer()
+          .ConfigureAppConfiguration(appConfig =>
+          {
+            appConfig.AddInMemoryCollection(new Dictionary<string, string>
+            {
+              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
+            });
+          })
+          .UseEnvironment("Development")
+      );
+
+    _disposables.AddDisposable(_notificationRecipient);
+    _disposables.AddAsyncDisposable(_webApplicationFactory);
   }
 
   public async Task StartAsync()
@@ -193,33 +216,12 @@ public class AppDriver : IAsyncDisposable
       Response.Create()
         .WithStatusCode(HttpStatusCode.OK));
 
-    _host = Host
-      .CreateDefaultBuilder()
-      .ConfigureWebHostDefaults(webBuilder =>
-      {
-        webBuilder
-          .UseTestServer()
-          .ConfigureAppConfiguration(appConfig =>
-          {
-            appConfig.AddInMemoryCollection(new Dictionary<string, string>
-            {
-              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
-            });
-          })
-          .UseEnvironment("Development")
-          .UseStartup<Startup>();
-      }).Build().Just();
-    await _host.Value.StartAsync();
+    ForceStart();
   }
 
   public async ValueTask DisposeAsync()
   {
-    await _host.DoAsync(async host =>
-    {
-      await host.StopAsync();
-      host.Dispose();
-    });
-    _disposables.Dispose();
+    await _disposables.DisposeAsync();
   }
 
   public NotificationsDriverExtension Notifications =>
@@ -227,6 +229,11 @@ public class AppDriver : IAsyncDisposable
 
   public WeatherForecastApiDriverExtension WeatherForecastApi
     => new(HttpClient, _disposables);
+
+  private void ForceStart()
+  {
+    _ = HttpClient;
+  }
 }
 
 public class NotificationsDriverExtension
@@ -282,7 +289,7 @@ public class WeatherForecastApiDriverExtension
       .Request("WeatherForecast")
       .AllowAnyHttpStatus()
       .PostJsonAsync(builder.Build());
-    _disposables.Add(httpResponse);
+    _disposables.AddDisposable(httpResponse);
     return httpResponse;
   }
 
@@ -292,7 +299,7 @@ public class WeatherForecastApiDriverExtension
       .AppendPathSegment(id)
       .AllowAnyHttpStatus()
       .GetAsync();
-    _disposables.Add(httpResponse);
+    _disposables.AddDisposable(httpResponse);
     return new RetrievedForecast(httpResponse);
   }
 
@@ -303,7 +310,7 @@ public class WeatherForecastApiDriverExtension
       .AppendPathSegment(userId)
       .AllowAnyHttpStatus()
       .GetAsync();
-    _disposables.Add(httpResponse);
+    _disposables.AddDisposable(httpResponse);
     var reportedForecasts = new RetrievedForecasts(httpResponse);
     reportedForecasts.ShouldIndicateSuccess();
     return reportedForecasts;

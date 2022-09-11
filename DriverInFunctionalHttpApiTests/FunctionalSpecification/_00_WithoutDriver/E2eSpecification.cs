@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -7,9 +6,8 @@ using DriverPatternDemo;
 using FluentAssertions;
 using Flurl.Http;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using TddXt.AnyRoot.Numbers;
 using TddXt.AnyRoot.Strings;
@@ -44,26 +42,21 @@ public class E2ESpecification
       Any.DateTime(),
       Any.Integer(),
       Any.String());
-    using var host = Host
-      .CreateDefaultBuilder()
-      .ConfigureWebHostDefaults(webBuilder =>
+
+    await using var webApp = new WebApplicationFactory<Program>()
+      .WithWebHostBuilder(c =>
       {
-        webBuilder
-          .UseTestServer()
-          .ConfigureAppConfiguration(appConfig =>
+        c.ConfigureAppConfiguration(appConfig =>
           {
             appConfig.AddInMemoryCollection(new Dictionary<string, string>
             {
               ["NotificationsConfiguration:BaseUrl"] = notificationRecipient.Urls.Single()
             });
           })
-          .UseEnvironment("Development")
-          .UseStartup<Startup>();
-      }).Build();
+          .UseEnvironment("Development");
+      });
 
-    await host.StartAsync();
-
-    var client = new FlurlClient(host.GetTestClient());
+    var client = new FlurlClient(webApp.CreateClient());
 
     using var postJsonAsync = await client.Request("WeatherForecast")
       .PostJsonAsync(inputForecastDto);

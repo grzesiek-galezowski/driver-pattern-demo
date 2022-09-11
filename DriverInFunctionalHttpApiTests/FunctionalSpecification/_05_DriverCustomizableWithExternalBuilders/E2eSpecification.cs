@@ -9,9 +9,9 @@ using Flurl.Http;
 using Functional.Maybe;
 using Functional.Maybe.Just;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using TddXt.AnyRoot.Numbers;
 using TddXt.AnyRoot.Strings;
@@ -71,15 +71,28 @@ public class E2ESpecification
 
 public class AppDriver : IAsyncDisposable, IAppDriverContext
 {
-  private Maybe<IHost> _host;
   private Maybe<ForecastCreationResultDto> _lastReportResult; //not pretty
   private readonly WireMockServer _notificationRecipient;
+  private readonly WebApplicationFactory<Program> _webApplicationFactory;
 
-  private FlurlClient HttpClient => new(_host.Value.GetTestClient());
+  private FlurlClient HttpClient => new(_webApplicationFactory.CreateClient());
 
   public AppDriver()
   {
     _notificationRecipient = WireMockServer.Start();
+    _webApplicationFactory = new WebApplicationFactory<Program>()
+      .WithWebHostBuilder(webBuilder =>
+        webBuilder
+          .UseTestServer()
+          .ConfigureAppConfiguration(appConfig =>
+          {
+            appConfig.AddInMemoryCollection(new Dictionary<string, string>
+            {
+              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
+            });
+          })
+          .UseEnvironment("Development")
+      );
   }
 
   public async Task StartAsync()
@@ -91,23 +104,7 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
       Response.Create()
         .WithStatusCode(HttpStatusCode.OK));
 
-    _host = Host
-      .CreateDefaultBuilder()
-      .ConfigureWebHostDefaults(webBuilder =>
-      {
-        webBuilder
-          .UseTestServer()
-          .ConfigureAppConfiguration(appConfig =>
-          {
-            appConfig.AddInMemoryCollection(new Dictionary<string, string>
-            {
-              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
-            });
-          })
-          .UseEnvironment("Development")
-          .UseStartup<Startup>();
-      }).Build().Just();
-    await _host.Value.StartAsync();
+    ForceStart();
   }
 
   //Note explicit implementation
@@ -118,11 +115,7 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
 
   public async ValueTask DisposeAsync()
   {
-    await _host.DoAsync(async host =>
-    {
-      await host.StopAsync();
-      host.Dispose();
-    });
+    await _webApplicationFactory.DisposeAsync();
     _notificationRecipient.Dispose();
   }
 
@@ -131,6 +124,11 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
 
   public WeatherForecastApiDriverExtension WeatherForecastApi
     => new(this, HttpClient, _lastReportResult);
+
+  private void ForceStart()
+  {
+    _ = HttpClient;
+  }
 }
 
 public class NotificationsDriverExtension
