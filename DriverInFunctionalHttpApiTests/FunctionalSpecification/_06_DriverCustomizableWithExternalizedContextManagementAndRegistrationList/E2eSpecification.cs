@@ -1,24 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using DriverPatternDemo;
-using FluentAssertions;
-using Flurl.Http;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
-using TddXt.AnyRoot.Numbers;
-using TddXt.AnyRoot.Strings;
-using TddXt.AnyRoot.Time;
-using WireMock.RequestBuilders;
-using WireMock.ResponseBuilders;
-using WireMock.Server;
-using Xunit;
-using static TddXt.AnyRoot.Root;
 
 namespace FunctionalSpecification._06_DriverCustomizableWithExternalizedContextManagementAndRegistrationList;
 

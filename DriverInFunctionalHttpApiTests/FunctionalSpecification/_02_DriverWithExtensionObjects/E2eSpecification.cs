@@ -1,26 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using DriverPatternDemo;
-using FluentAssertions;
-using Flurl.Http;
-using Functional.Maybe;
-using Functional.Maybe.Just;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
-using TddXt.AnyRoot.Numbers;
-using TddXt.AnyRoot.Strings;
-using TddXt.AnyRoot.Time;
-using WireMock.RequestBuilders;
-using WireMock.ResponseBuilders;
-using WireMock.Server;
-using Xunit;
-using static TddXt.AnyRoot.Root;
 
 namespace FunctionalSpecification._02_DriverWithExtensionObjects;
 
@@ -47,7 +25,8 @@ public class E2ESpecification
 }
 
 //Three deficiencies of this driver:
-//1) All the values are decided internally, (see tenant id), so it might be difficult to override default values
+//1) All the values are decided internally, (see tenant id),
+//   so it might be difficult to override default values
 //2) _lastInput lifetime is managed internally
 //3) _lastOutput lifetime is managed internally
 

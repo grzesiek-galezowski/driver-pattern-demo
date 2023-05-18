@@ -56,11 +56,13 @@ public class WeatherForecastController : ControllerBase
   [HttpPost]
   public async Task<ActionResult> ReportWeatherForecast(WeatherForecastDto forecastDto)
   {
+    // Validate input
     if (forecastDto.TemperatureC < -100)
     {
       return BadRequest();
     }
 
+    // Create record to save in database
     var persistentWeatherForecastDto = new PersistentWeatherForecastDto(
       Guid.NewGuid(),
       forecastDto.TenantId,
@@ -69,9 +71,11 @@ public class WeatherForecastController : ControllerBase
       forecastDto.TemperatureC,
       forecastDto.Summary);
 
+    // Add record to database
     var entityEntry = await _db.WeatherForecasts.AddAsync(persistentWeatherForecastDto);
     await _db.SaveChangesAsync();
 
+    // Send notification about new forecast
     await _flurlClient.Request("notifications").PostJsonAsync(
       new WeatherForecastSuccessfullyReportedEventDto(
         forecastDto.TenantId,
