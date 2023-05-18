@@ -27,7 +27,8 @@ public class E2ESpecification
   }
 
   [Fact]
-  public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
+  public async Task 
+    ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
   {
     //GIVEN
     await using var driver = new AppDriver();
@@ -66,7 +67,8 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
           {
             appConfig.AddInMemoryCollection(new Dictionary<string, string>
             {
-              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
+              ["NotificationsConfiguration:BaseUrl"] = 
+                _notificationRecipient.Urls.Single()
             });
           })
           .UseEnvironment("Development")
@@ -166,13 +168,15 @@ public class WeatherForecastApiDriverExtension
     _driverContext.SaveAsLastForecastReportResult(jsonResponse);
   }
 
-  public async Task<ReportForecastResponse> AttemptToReportForecast(WeatherForecastReportBuilder builder)
+  public async Task<ReportForecastResponse> AttemptToReportForecast(
+    WeatherForecastReportBuilder builder)
   {
     var httpResponse = await AttemptToReportForecastViaHttp(builder);
     return new ReportForecastResponse(httpResponse);
   }
 
-  private async Task<IFlurlResponse> AttemptToReportForecastViaHttp(WeatherForecastReportBuilder builder)
+  private async Task<IFlurlResponse> AttemptToReportForecastViaHttp(
+    WeatherForecastReportBuilder builder)
   {
     var httpResponse = await _httpClient
       .Request("WeatherForecast")
