@@ -1,4 +1,5 @@
 using DriverPatternDemo;
+using TddXt.TypeResolution.CustomCollections;
 
 namespace FunctionalSpecification._07_DriverCustomizableWithActors;
 
@@ -365,7 +366,7 @@ public record WeatherForecastReportBuilder
   private string TenantId { get; init; } = Any.String();
   private string UserId { get; init; } = Any.String();
   private DateTime Time { get; init; } = Any.DateTime();
-  private int TemperatureC { get; init; } = Any.Integer();
+  private int TemperatureC { get; init; } = -100;
   private string Summary { get; init; } = Any.String();
 
   public WeatherForecastReportBuilder WithTenantId(string tenantId)

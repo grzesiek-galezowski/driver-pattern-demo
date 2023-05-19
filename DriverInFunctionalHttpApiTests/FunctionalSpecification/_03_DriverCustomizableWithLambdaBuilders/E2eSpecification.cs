@@ -171,7 +171,7 @@ public interface IAppDriverContext
 public record WeatherForecastReportBuilder(string UserId, string TenantId)
 {
   private DateTime Time { get; init; } = Any.DateTime();
-  private int TemperatureC { get; init; } = Any.Integer();
+  private int TemperatureC { get; init; } = -100;
   private string Summary { get; init; } = Any.String();
 
   public WeatherForecastReportBuilder WithTenantId(string tenantId)
