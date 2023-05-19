@@ -5,21 +5,20 @@ namespace FunctionalSpecification._06_DriverCustomizableWithExternalizedContextM
 
 public class E2ESpecification
 {
-  private static WeatherForecastReportBuilder ForecastReport() => new();
-
   [Fact]
   public async Task ShouldAllowRetrievingReportedForecast()
   {
     //GIVEN
     await using var driver = new AppDriver();
     await driver.StartAsync();
-    var weatherForecast = ForecastReport();
+    var weatherForecast = new WeatherForecastReportBuilder();
 
     using var reportForecastResponse = await driver.WeatherForecastApi.Report(weatherForecast);
 
     //WHEN
-    using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecastBy(
-      await reportForecastResponse.GetId());
+    using var retrievedForecast = 
+      await driver.WeatherForecastApi.GetReportedForecastBy(
+        await reportForecastResponse.GetId());
 
     //THEN
     await retrievedForecast.ShouldBeTheSameAs(weatherForecast);
@@ -38,19 +37,29 @@ public class E2ESpecification
     var tenantId2 = Any.String();
     await using var driver = new AppDriver();
     await driver.StartAsync();
-    var user1Forecast1 = ForecastReport() with {UserId = userId1, TenantId = tenantId1};
-    var user1Forecast2 = ForecastReport() with {UserId = userId1, TenantId = tenantId1};
-    var user2Forecast = ForecastReport() with {UserId = userId2, TenantId = tenantId2};
+    var user1Forecast1 = new WeatherForecastReportBuilder()
+      .WithUserId(userId1)
+      .WithTenantId(tenantId1);
+    var user1Forecast2 = new WeatherForecastReportBuilder()
+      .WithUserId(userId1)
+      .WithTenantId(tenantId1);
+    var user2Forecast = new WeatherForecastReportBuilder()
+      .WithUserId(userId2)
+      .WithTenantId(tenantId2);
 
-    using var responseForUser1Forecast1 = await driver.WeatherForecastApi.Report(user1Forecast1);
-    using var responseForUser1Forecast2 = await driver.WeatherForecastApi.Report(user1Forecast2);
-    using var responseForUser2Forecast = await driver.WeatherForecastApi.Report(user2Forecast);
+    using var responseForUser1Forecast1 = 
+      await driver.WeatherForecastApi.Report(user1Forecast1);
+    using var responseForUser1Forecast2 = 
+      await driver.WeatherForecastApi.Report(user1Forecast2);
+    using var responseForUser2Forecast = 
+      await driver.WeatherForecastApi.Report(user2Forecast);
 
     //WHEN
-    using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecastsFrom(userId1, tenantId1);
+    using var retrievedForecasts = 
+      await driver.WeatherForecastApi.GetReportedForecastsFrom(userId1, tenantId1);
 
     //THEN
-    await retrievedForecast.ShouldConsistOf(user1Forecast1, user1Forecast2);
+    await retrievedForecasts.ShouldConsistOf(user1Forecast1, user1Forecast2);
   }
 
   [Fact]
@@ -61,8 +70,10 @@ public class E2ESpecification
     await driver.StartAsync();
 
     //WHEN
-    using var reportForecastResponse = await driver.WeatherForecastApi
-      .AttemptToReportForecast(ForecastReport() with {TemperatureC = -101});
+    using var reportForecastResponse = 
+      await driver.WeatherForecastApi
+        .AttemptToReportForecast(
+          new WeatherForecastReportBuilder().WithTemperatureC(-101));
 
     //THEN
     reportForecastResponse.ShouldBeRejectedAsBadRequest();
@@ -294,15 +305,36 @@ public class RetrievedForecast : IDisposable
 
 public record WeatherForecastReportBuilder
 {
-  public string TenantId { private get; init; } = Any.String();
-  public string UserId { private get; init; } = Any.String();
-  public DateTime Time { private get; init; } = Any.DateTime();
-  public int TemperatureC { private get; init; } = Any.Integer();
-  public string Summary { private get; init; } = Any.String();
+  private string TenantId { get; init; } = Any.String();
+  private string UserId { get; init; } = Any.String();
+  private DateTime Time { get; init; } = Any.DateTime();
+  private int TemperatureC { get; init; } = Any.Integer();
+  private string Summary { get; init; } = Any.String();
+
+  public WeatherForecastReportBuilder WithTenantId(string tenantId)
+  {
+    return this with { TenantId = tenantId };
+  }
+  public WeatherForecastReportBuilder WithUserId(string userId)
+  {
+    return this with { UserId = userId };
+  }
+  public WeatherForecastReportBuilder WithTime(DateTime time)
+  {
+    return this with { Time = time };
+  }
+  public WeatherForecastReportBuilder WithTemperatureC(int temperatureC)
+  {
+    return this with { TemperatureC = temperatureC };
+  }
+  public WeatherForecastReportBuilder WithSummary(string summary)
+  {
+    return this with { Summary = summary };
+  }
 
   public WeatherForecastDto Build()
   {
-    return new(
+    return new WeatherForecastDto(
       TenantId, 
       UserId, 
       Time,

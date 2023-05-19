@@ -31,8 +31,9 @@ public class E2ESpecification
     await driver.StartAsync();
 
     //WHEN
-    using var reportForecastResponse = await driver.WeatherForecastApi.AttemptToReportForecast(
-      request => request with {TemperatureC = -101});
+    using var reportForecastResponse = 
+      await driver.WeatherForecastApi
+        .AttemptToReportForecast(request => request.WithTemperatureC(-101));
 
     //THEN
     reportForecastResponse.ShouldBeRejectedAsBadRequest();
@@ -169,13 +170,34 @@ public interface IAppDriverContext
 
 public record WeatherForecastReportBuilder(string UserId, string TenantId)
 {
-  public DateTime Time { private get; init; } = Any.DateTime();
-  public int TemperatureC { private get; init; } = Any.Integer();
-  public string Summary { private get; init; } = Any.String();
+  private DateTime Time { get; init; } = Any.DateTime();
+  private int TemperatureC { get; init; } = Any.Integer();
+  private string Summary { get; init; } = Any.String();
+
+  public WeatherForecastReportBuilder WithTenantId(string tenantId)
+  {
+    return this with { TenantId = tenantId };
+  }
+  public WeatherForecastReportBuilder WithUserId(string userId)
+  {
+    return this with { UserId = userId };
+  }
+  public WeatherForecastReportBuilder WithTime(DateTime time)
+  {
+    return this with { Time = time };
+  }
+  public WeatherForecastReportBuilder WithTemperatureC(int temperatureC)
+  {
+    return this with { TemperatureC = temperatureC };
+  }
+  public WeatherForecastReportBuilder WithSummary(string summary)
+  {
+    return this with { Summary = summary };
+  }
 
   public WeatherForecastDto Build()
   {
-    return new(
+    return new WeatherForecastDto(
       TenantId, 
       UserId, 
       Time,
@@ -229,7 +251,8 @@ public class WeatherForecastApiDriverExtension
 
   private async Task<IFlurlResponse> AttemptToReportForecastViaHttp(Func<WeatherForecastReportBuilder, WeatherForecastReportBuilder> customize)
   {
-    var forecastDto = customize(new WeatherForecastReportBuilder(_userId, _tenantId)).Build();
+    var forecastDto = customize(
+      new WeatherForecastReportBuilder(_userId, _tenantId)).Build();
     _driverContext.SaveAsLastReportedForecast(forecastDto);
 
     var httpResponse = await _httpClient

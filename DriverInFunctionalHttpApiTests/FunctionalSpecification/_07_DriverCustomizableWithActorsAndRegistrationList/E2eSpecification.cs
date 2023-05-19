@@ -45,7 +45,8 @@ public class E2ESpecification
   }
 
   [Fact]
-  public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsBelowAllowedMinimum()
+  public async Task 
+    ShouldRejectForecastReportAsBadRequestWhenTemperatureIsBelowAllowedMinimum()
   {
     //GIVEN
     await using var driver = new AppDriver();
@@ -54,7 +55,8 @@ public class E2ESpecification
 
     //WHEN
     var reportForecastResponse = 
-      await user.AttemptToReportNewForecast(forecast => forecast with {TemperatureC = -101});
+      await user.AttemptToReportNewForecast(
+        forecast => forecast.WithTemperatureC(-101));
 
     //THEN
     reportForecastResponse.ShouldBeRejectedAsBadRequest();
@@ -80,13 +82,15 @@ public class User
     await ReportNewForecast(_ => _);
   }
 
-  public async Task ReportNewForecast(Func<WeatherForecastReportBuilder, WeatherForecastReportBuilder> customize)
+  public async Task ReportNewForecast(
+    Func<WeatherForecastReportBuilder, WeatherForecastReportBuilder> customize)
   {
     var reportForecastResponse = await AttemptToReportNewForecast(customize);
     _forecastCreationResponses.Add(reportForecastResponse);
   }
 
-  public async Task<ReportForecastResponse> AttemptToReportNewForecast(Func<WeatherForecastReportBuilder, WeatherForecastReportBuilder> customize)
+  public async Task<ReportForecastResponse> AttemptToReportNewForecast(
+    Func<WeatherForecastReportBuilder, WeatherForecastReportBuilder> customize)
   {
     var forecast = customize(CreateForecast());
     _reportedForecasts.Add(forecast);
@@ -95,7 +99,9 @@ public class User
 
   public async Task<RetrievedForecasts> RetrieveAllReportedForecasts()
   {
-    return await _driver.WeatherForecastApi.GetReportedForecastsFrom(_userId1, _tenantId1);
+    return await _driver.WeatherForecastApi.GetReportedForecastsFrom(
+      _userId1, 
+      _tenantId1);
   }
 
   public WeatherForecastReportBuilder[] AllReportedForecasts()
@@ -105,7 +111,9 @@ public class User
 
   private WeatherForecastReportBuilder CreateForecast()
   {
-    return ForecastReport() with {UserId = _userId1, TenantId = _tenantId1};
+    return new WeatherForecastReportBuilder()
+      .WithUserId(_userId1)
+      .WithTenantId(_tenantId1);
   }
 
   public ReportForecastResponse LastReportedForecastResponse()
@@ -124,8 +132,6 @@ public class User
   {
     return _reportedForecasts.Last();
   }
-
-  private static WeatherForecastReportBuilder ForecastReport() => new();
 }
 
 public class Disposables
@@ -379,15 +385,36 @@ public class RetrievedForecast : IDisposable
 
 public record WeatherForecastReportBuilder
 {
-  public string TenantId { private get; init; } = Any.String();
-  public string UserId { private get; init; } = Any.String();
-  public DateTime Time { private get; init; } = Any.DateTime();
-  public int TemperatureC { private get; init; } = Any.Integer();
-  public string Summary { private get; init; } = Any.String();
+  private string TenantId { get; init; } = Any.String();
+  private string UserId { get; init; } = Any.String();
+  private DateTime Time { get; init; } = Any.DateTime();
+  private int TemperatureC { get; init; } = Any.Integer();
+  private string Summary { get; init; } = Any.String();
+
+  public WeatherForecastReportBuilder WithTenantId(string tenantId)
+  {
+    return this with { TenantId = tenantId };
+  }
+  public WeatherForecastReportBuilder WithUserId(string userId)
+  {
+    return this with { UserId = userId };
+  }
+  public WeatherForecastReportBuilder WithTime(DateTime time)
+  {
+    return this with { Time = time };
+  }
+  public WeatherForecastReportBuilder WithTemperatureC(int temperatureC)
+  {
+    return this with { TemperatureC = temperatureC };
+  }
+  public WeatherForecastReportBuilder WithSummary(string summary)
+  {
+    return this with { Summary = summary };
+  }
 
   public WeatherForecastDto Build()
   {
-    return new(
+    return new WeatherForecastDto(
       TenantId, 
       UserId, 
       Time,
