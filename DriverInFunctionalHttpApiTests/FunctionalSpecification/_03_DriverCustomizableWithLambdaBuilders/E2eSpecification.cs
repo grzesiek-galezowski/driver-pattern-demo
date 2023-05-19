@@ -52,8 +52,7 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
   private readonly string _userId = Any.String();
   private readonly WireMockServer _notificationRecipient;
   private readonly WebApplicationFactory<Program> _webApplicationFactory;
-
-  private FlurlClient HttpClient => new(_webApplicationFactory.CreateClient());
+  private Maybe<FlurlClient> _httpClient;
 
   public AppDriver()
   {
@@ -64,7 +63,7 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
           .UseTestServer()
           .ConfigureAppConfiguration(appConfig =>
           {
-            appConfig.AddInMemoryCollection(new Dictionary<string, string>
+            appConfig.AddInMemoryCollection(new Dictionary<string, string?>
             {
               ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
             });
@@ -85,6 +84,20 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
     ForceStart();
   }
 
+  public NotificationsDriverExtension Notifications =>
+    new(_userId,
+      _tenantId,
+      _notificationRecipient,
+      _lastInputForecastDto.Value());
+
+  public WeatherForecastApiDriverExtension WeatherForecastApi =>
+    new(this,
+      _tenantId,
+      _userId,
+      _httpClient.Value(),
+      _lastReportResult,
+      _lastInputForecastDto);
+
   //Note explicit implementation
   void IAppDriverContext.SaveAsLastForecastReportResult(ForecastCreationResultDto dto)
   {
@@ -99,25 +112,15 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
 
   public async ValueTask DisposeAsync()
   {
+    _httpClient.Value().Dispose();
     await _webApplicationFactory.DisposeAsync();
     _notificationRecipient.Dispose();
   }
 
-  public NotificationsDriverExtension Notifications =>
-    new(_userId,
-      _tenantId,
-      _notificationRecipient,
-      _lastInputForecastDto.Value);
-
-  public WeatherForecastApiDriverExtension WeatherForecastApi =>
-    new(this,
-      _tenantId,
-      _userId,
-      HttpClient,
-      _lastReportResult,
-      _lastInputForecastDto);
-
-  private void ForceStart() => _ = HttpClient;
+  private void ForceStart()
+  {
+    _httpClient = new FlurlClient(_webApplicationFactory.CreateClient()).Just();
+  }
 }
 
 public class NotificationsDriverExtension
@@ -239,11 +242,11 @@ public class WeatherForecastApiDriverExtension
   public async Task<RetrievedForecast> GetReportedForecast()
   {
     var httpResponse = await _httpClient.Request("WeatherForecast")
-      .AppendPathSegment(_lastReportResult.Value.Id)
+      .AppendPathSegment(_lastReportResult.Value().Id)
       .AllowAnyHttpStatus()
       .GetAsync();
 
-    return new RetrievedForecast(httpResponse, _lastInputForecastDto.Value);
+    return new RetrievedForecast(httpResponse, _lastInputForecastDto.Value());
   }
 }
 

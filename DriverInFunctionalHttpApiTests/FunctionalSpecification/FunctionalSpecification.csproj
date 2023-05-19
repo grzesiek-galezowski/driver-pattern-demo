@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
 
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
@@ -9,26 +9,25 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Any" Version="7.0.0" />
-    <PackageReference Include="FluentAssertions" Version="6.7.0" />
+    <PackageReference Include="Any" Version="9.2.1" />
+    <PackageReference Include="Core.Maybe" Version="6.0.0" />
+    <PackageReference Include="FluentAssertions" Version="6.11.0" />
     <PackageReference Include="FluentAssertions.Analyzers" Version="0.17.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Flurl.Http" Version="3.2.4" />
-    <PackageReference Include="Functional.Maybe" Version="2.0.20" />
-    <PackageReference Include="Functional.Maybe.Just" Version="2.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="6.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="6.0.8" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.1" />
-    <PackageReference Include="WireMock.Net" Version="1.5.5" />
-    <PackageReference Include="WireMock.Net.FluentAssertions" Version="1.5.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="7.0.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <PackageReference Include="WireMock.Net" Version="1.5.25" />
+    <PackageReference Include="WireMock.Net.FluentAssertions" Version="1.5.25" />
     <PackageReference Include="xunit" Version="2.4.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="coverlet.collector" Version="3.1.2">
+    <PackageReference Include="coverlet.collector" Version="3.2.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

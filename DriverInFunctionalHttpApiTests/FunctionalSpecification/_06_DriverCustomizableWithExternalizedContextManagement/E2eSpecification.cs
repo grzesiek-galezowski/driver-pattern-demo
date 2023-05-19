@@ -1,4 +1,5 @@
 using DriverPatternDemo;
+using System.Net.Http;
 
 namespace FunctionalSpecification._06_DriverCustomizableWithExternalizedContextManagement;
 
@@ -73,8 +74,7 @@ public class AppDriver : IAsyncDisposable
 {
   private readonly WireMockServer _notificationRecipient;
   private readonly WebApplicationFactory<Program> _webApplicationFactory;
-
-  private FlurlClient HttpClient => new(_webApplicationFactory.CreateClient());
+  private Maybe<FlurlClient> _httpClient;
 
   public AppDriver()
   {
@@ -85,9 +85,10 @@ public class AppDriver : IAsyncDisposable
           .UseTestServer()
           .ConfigureAppConfiguration(appConfig =>
           {
-            appConfig.AddInMemoryCollection(new Dictionary<string, string>
+            appConfig.AddInMemoryCollection(new Dictionary<string, string?>
             {
-              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
+              ["NotificationsConfiguration:BaseUrl"] 
+                = _notificationRecipient.Urls.Single()
             });
           })
           .UseEnvironment("Development")
@@ -108,6 +109,7 @@ public class AppDriver : IAsyncDisposable
 
   public async ValueTask DisposeAsync()
   {
+    _httpClient.Value().Dispose();
     await _webApplicationFactory.DisposeAsync();
     _notificationRecipient.Dispose();
   }
@@ -116,11 +118,11 @@ public class AppDriver : IAsyncDisposable
     new(_notificationRecipient);
 
   public WeatherForecastApiDriverExtension WeatherForecastApi
-    => new(HttpClient);
+    => new(_httpClient.Value());
 
   private void ForceStart()
   {
-    _ = HttpClient;
+    _httpClient = new FlurlClient(_webApplicationFactory.CreateClient()).Just();
   }
 }
 

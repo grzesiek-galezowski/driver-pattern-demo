@@ -163,8 +163,7 @@ public class AppDriver : IAsyncDisposable
   private readonly WireMockServer _notificationRecipient;
   private readonly Disposables _disposables = new();
   private readonly WebApplicationFactory<Program> _webApplicationFactory;
-
-  private FlurlClient HttpClient => new(_webApplicationFactory.CreateClient());
+  private Maybe<FlurlClient> _httpClient;
 
   public AppDriver()
   {
@@ -175,7 +174,7 @@ public class AppDriver : IAsyncDisposable
           .UseTestServer()
           .ConfigureAppConfiguration(appConfig =>
           {
-            appConfig.AddInMemoryCollection(new Dictionary<string, string>
+            appConfig.AddInMemoryCollection(new Dictionary<string, string?>
             {
               ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
             });
@@ -208,11 +207,12 @@ public class AppDriver : IAsyncDisposable
     new(_notificationRecipient);
 
   public WeatherForecastApiDriverExtension WeatherForecastApi
-    => new(HttpClient, _disposables);
+    => new(_httpClient.Value(), _disposables);
 
   private void ForceStart()
   {
-    _ = HttpClient;
+    _httpClient = new FlurlClient(_webApplicationFactory.CreateClient()).Just();
+    _disposables.AddDisposable(_httpClient.Value());
   }
 }
 

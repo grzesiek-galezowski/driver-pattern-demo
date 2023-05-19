@@ -4,20 +4,19 @@ namespace FunctionalSpecification._05_DriverCustomizableWithExternalBuilders;
 
 public class E2ESpecification
 {
-  private static WeatherForecastReportBuilder ForecastReport() => new();
-
   [Fact]
   public async Task ShouldAllowRetrievingReportedForecast()
   {
     //GIVEN
     await using var driver = new AppDriver();
     await driver.StartAsync();
-    var weatherForecast = ForecastReport();
+    var weatherForecast = new WeatherForecastReportBuilder();
 
     await driver.WeatherForecastApi.Report(weatherForecast);
 
     //WHEN
-    using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecast();
+    using var retrievedForecast = 
+      await driver.WeatherForecastApi.GetReportedForecast();
 
     //THEN
     await retrievedForecast.ShouldBeTheSameAs(weatherForecast);
@@ -36,7 +35,9 @@ public class E2ESpecification
 
     //WHEN
     using var reportForecastResponse = await driver.WeatherForecastApi
-      .AttemptToReportForecast(ForecastReport() with {TemperatureC = -101});
+      .AttemptToReportForecast(
+        new WeatherForecastReportBuilder()
+          .WithTemperatureC(-101));
 
     //THEN
     reportForecastResponse.ShouldBeRejectedAsBadRequest();
@@ -53,8 +54,7 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
   private Maybe<ForecastCreationResultDto> _lastReportResult; //not pretty
   private readonly WireMockServer _notificationRecipient;
   private readonly WebApplicationFactory<Program> _webApplicationFactory;
-
-  private FlurlClient HttpClient => new(_webApplicationFactory.CreateClient());
+  private Maybe<FlurlClient> _httpClient;
 
   public AppDriver()
   {
@@ -65,7 +65,7 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
           .UseTestServer()
           .ConfigureAppConfiguration(appConfig =>
           {
-            appConfig.AddInMemoryCollection(new Dictionary<string, string>
+            appConfig.AddInMemoryCollection(new Dictionary<string, string?>
             {
               ["NotificationsConfiguration:BaseUrl"] = 
                 _notificationRecipient.Urls.Single()
@@ -95,6 +95,7 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
 
   public async ValueTask DisposeAsync()
   {
+    _httpClient.Value().Dispose();
     await _webApplicationFactory.DisposeAsync();
     _notificationRecipient.Dispose();
   }
@@ -103,11 +104,11 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
     new(_notificationRecipient);
 
   public WeatherForecastApiDriverExtension WeatherForecastApi
-    => new(this, HttpClient, _lastReportResult);
+    => new(this, _httpClient.Value(), _lastReportResult);
 
   private void ForceStart()
   {
-    _ = HttpClient;
+    _httpClient = new FlurlClient(_webApplicationFactory.CreateClient()).Just();
   }
 }
 
@@ -161,9 +162,9 @@ public class WeatherForecastApiDriverExtension
     _lastReportResult = lastReportResult;
   }
 
-  public async Task Report(WeatherForecastReportBuilder weatherForecastDto)
+  public async Task Report(WeatherForecastReportBuilder weatherForecastBuilder)
   {
-    var httpResponse = await AttemptToReportForecastViaHttp(weatherForecastDto);
+    var httpResponse = await AttemptToReportForecastViaHttp(weatherForecastBuilder);
     var jsonResponse = await httpResponse.GetJsonAsync<ForecastCreationResultDto>();
     _driverContext.SaveAsLastForecastReportResult(jsonResponse);
   }
@@ -188,7 +189,7 @@ public class WeatherForecastApiDriverExtension
   public async Task<RetrievedForecast> GetReportedForecast()
   {
     var httpResponse = await _httpClient.Request("WeatherForecast")
-      .AppendPathSegment(_lastReportResult.Value.Id)
+      .AppendPathSegment(_lastReportResult.Value().Id)
       .AllowAnyHttpStatus()
       .GetAsync();
 
@@ -240,11 +241,32 @@ public class RetrievedForecast : IDisposable
 
 public record WeatherForecastReportBuilder
 {
-  public string TenantId { private get; init; } = Any.String();
-  public string UserId { private get; init; } = Any.String();
-  public DateTime Time { private get; init; } = Any.DateTime();
-  public int TemperatureC { private get; init; } = Any.Integer();
-  public string Summary { private get; init; } = Any.String();
+  private string TenantId { get; init; } = Any.String();
+  private string UserId { get; init; } = Any.String();
+  private DateTime Time { get; init; } = Any.DateTime();
+  private int TemperatureC { get; init; } = Any.Integer();
+  private string Summary { get; init; } = Any.String();
+
+  public WeatherForecastReportBuilder WithTenantId(string tenantId)
+  {
+    return this with { TenantId = tenantId };
+  }
+  public WeatherForecastReportBuilder WithUserId(string userId)
+  {
+    return this with { UserId = userId };
+  }
+  public WeatherForecastReportBuilder WithTime(DateTime time)
+  {
+    return this with { Time = time };
+  }
+  public WeatherForecastReportBuilder WithTemperatureC(int temperatureC)
+  {
+    return this with { TemperatureC = temperatureC };
+  }
+  public WeatherForecastReportBuilder WithSummary(string summary)
+  {
+    return this with { Summary = summary };
+  }
 
   public WeatherForecastDto Build()
   {
