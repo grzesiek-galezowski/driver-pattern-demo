@@ -1,0 +1,5 @@
+- For now, only a single test
+- Uses Asp.Net Core's facility for in-process service testing
+- This looks like a mess, especially for non-C# users
+- Explain each step of a single test
+- Difficult to see the forest for the trees
