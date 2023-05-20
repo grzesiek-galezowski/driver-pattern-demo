@@ -31,7 +31,7 @@ public class AppDriver : IAsyncDisposable
     _disposables.AddAsyncDisposable(_webApplicationFactory);
   }
 
-  public async Task StartAsync()
+  public async Task Start()
   {
     _notificationRecipient.Given(
       Request.Create()

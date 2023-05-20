@@ -7,7 +7,7 @@ public class E2ESpecification
   {
     //GIVEN
     await using var driver = new AppDriver();
-    await driver.StartAsync();
+    await driver.Start();
     var weatherForecast = new WeatherForecastReportBuilder();
 
     await driver.WeatherForecastApi.Report(weatherForecast);
@@ -29,7 +29,7 @@ public class E2ESpecification
   {
     //GIVEN
     await using var driver = new AppDriver();
-    await driver.StartAsync();
+    await driver.Start();
 
     //WHEN
     using var reportForecastResponse = await driver.WeatherForecastApi

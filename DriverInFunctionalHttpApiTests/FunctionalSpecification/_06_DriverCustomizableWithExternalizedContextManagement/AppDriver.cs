@@ -27,7 +27,7 @@ public class AppDriver : IAsyncDisposable
       );
   }
 
-  public async Task StartAsync()
+  public async Task Start()
   {
     _notificationRecipient.Given(
       Request.Create()

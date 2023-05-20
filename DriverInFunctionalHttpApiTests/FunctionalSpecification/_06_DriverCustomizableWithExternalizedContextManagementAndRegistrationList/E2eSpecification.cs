@@ -7,7 +7,7 @@ public class E2ESpecification
   {
     //GIVEN
     await using var driver = new AppDriver();
-    await driver.StartAsync();
+    await driver.Start();
     var weatherForecast = new WeatherForecastReportBuilder();
 
     var reportForecastResponse = 
@@ -33,7 +33,7 @@ public class E2ESpecification
     var tenantId1 = Any.String();
     var tenantId2 = Any.String();
     await using var driver = new AppDriver();
-    await driver.StartAsync();
+    await driver.Start();
     var user1Forecast1 = new WeatherForecastReportBuilder()
       .WithUserId(userId1)
       .WithTenantId(tenantId1);
@@ -62,7 +62,7 @@ public class E2ESpecification
   {
     //GIVEN
     await using var driver = new AppDriver();
-    await driver.StartAsync();
+    await driver.Start();
 
     //WHEN
     var reportForecastResponse = 

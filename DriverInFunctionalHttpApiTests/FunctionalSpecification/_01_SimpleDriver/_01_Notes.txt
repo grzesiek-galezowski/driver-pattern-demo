@@ -11,7 +11,7 @@
 - Why creation and start are separated?
   - e.g. driver.SetupTooShortHttpRetryTimeout()
   - e.g. driver.SetXyzFeatureFlag(x);
-  - a static method can be introduced as a shortcut, e.g. Start()
+  - a static method can be introduced as a shortcut, e.g. StartNew()
 - What is the retrievedForecast?
   - AssertObject pattern
 - DisposeAsync

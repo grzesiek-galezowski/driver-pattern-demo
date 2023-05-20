@@ -7,7 +7,7 @@ public class E2ESpecification
   {
     //GIVEN
     await using var driver = new AppDriver();
-    await driver.StartAsync();
+    await driver.Start();
     var user = new User(driver);
 
     await user.ReportNewForecast();
@@ -27,7 +27,7 @@ public class E2ESpecification
   {
     //GIVEN
     await using var driver = new AppDriver();
-    await driver.StartAsync();
+    await driver.Start();
     var user1 = new User(driver);
     var user2 = new User(driver);
 
@@ -48,7 +48,7 @@ public class E2ESpecification
   {
     //GIVEN
     await using var driver = new AppDriver();
-    await driver.StartAsync();
+    await driver.Start();
     var user = new User(driver);
 
     //WHEN
