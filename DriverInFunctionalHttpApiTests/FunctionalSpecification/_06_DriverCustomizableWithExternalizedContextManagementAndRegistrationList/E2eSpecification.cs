@@ -1,5 +1,4 @@
 using DriverPatternDemo;
-using System.Net.Http;
 
 namespace FunctionalSpecification._06_DriverCustomizableWithExternalizedContextManagementAndRegistrationList;
 
