@@ -23,7 +23,8 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
           {
             appConfig.AddInMemoryCollection(new Dictionary<string, string?>
             {
-              ["NotificationsConfiguration:BaseUrl"] = _notificationRecipient.Urls.Single()
+              ["NotificationsConfiguration:BaseUrl"] 
+                = _notificationRecipient.Urls.Single()
             });
           })
           .UseEnvironment("Development")
