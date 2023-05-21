@@ -2,12 +2,27 @@
   - driver.ReportForecast() => driver.WeatherForecastApi.ReportForecast()
   - driver.GetReportedForecast() => driver.WeatherForecastApi.GetReportedForecast()
   - driver.NotificationAboutForecastReportedShouldBeSent() => driver.Notifications.ShouldIncludeNotificationAboutReportedForecast()
+- Properties are C# feature. In languages that don't support properties (like Java), these can be method calls
 - I call WeatherForecastApi and Notifications extension objects, because they "extend" the API of the driver with methods for specific inputs or outputs
 - WeatherForecastApi is an example of input extension object - contains triggers
 - Notifications is an example of output extension object - contains assertions
 - Some extension objects can be a mix of that
 - They have two roles
   - grouping role (all forecast API actions are behind the WeatherForecastApi), which makes the driver object API surface smaller.
-    - show in code
+    - show in the code
   - delegating role (logic related to similar actions is delegated into separate objects, making the driver smaller)
-    - show in code
+    - show in the code
+- Show the properties - the extension objects are created anew on each call. 
+  - the reason is to prevent them from holding state for longer than one call, because this state might get desynchronized from the driver (e.g. tenant id)
+  - the driver is the only one managing the state
+- If an extension object needs to store state, it needs to update the driver 
+  - see the IAppDriverContext interface - it's a separate interface implemented using C# explicit implementation so that the tests don't have access to that API
+  - in other languages or if this gets more complicated, we can extract all the state to a separate class and pass it along.
+- If technical grouping doesn't work, we can use more domain grouping (TODO example?)
+- This deals with API surface, but still, we've got the other evolution direction - more data combinations, e.g.
+  - forecast with temperature -100, 
+  - HTTP request without a specific header
+  - two distinct users report bad weather
+  - needs more flexibility - I will show several examples of how to do that
+
+
