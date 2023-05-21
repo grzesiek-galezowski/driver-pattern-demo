@@ -7,7 +7,7 @@
   - Retrieve reported forecast
   - Assert that the retrieved forecast is the same as previously reported
   - Assert that a notification was sent to a wiremock about the reported forecast.
-- It can clearly be seen that the notification assertion doesn't fit
+- Easier to spot that the notification assertion doesn't fit
 - Why creation and start are separated?
   - e.g. driver.SetupTooShortHttpRetryTimeout()
   - e.g. driver.SetXyzFeatureFlag(x);
@@ -22,6 +22,9 @@
 - Two typical ways of evolution:
   - More "endpoints"" (e.g. summary translation, methods for configuration, methods for setting up data in database)
     - needs more segregation
-  - More data combinations - e.g. forecast with temperature -100
+  - More data combinations, e.g.
+    - forecast with temperature -100, 
+    - HTTP request without a specific header
+    - two distinct users report bad weather
     - needs more flexibility
   - let's first deal with "more endpoints" challenge as it's the easier one

@@ -1,26 +1,13 @@
-- This is the same test implemented using the driver pattern
-- Seems much more readable
-- Explain sequence
-  - Create a driver
-  - Start a driver (initiate tested code's startup sequence)
-  - Report a single weather forecast
-  - Retrieve reported forecast
-  - Assert that the retrieved forecast is the same as previously reported
-  - Assert that a notification was sent to a wiremock about the reported forecast.
-- Why creation and start are separated?
-  - TODO example of something I might change
-- What is the retrievedForecast?
-  - AssertObject pattern
-- DisposeAsync
-  - Cleans everything, similar to teardowns and Dispose in xUnit.net
-  - If one Dispose fails, others are not executed.
-    - two ways of dealing with this (should I tell about it?)
-- GetReportedForecast, ShouldBeTheSameAsReported - buttery butter
-- Two typical ways of evolution:
-  - More "endpoints"" (e.g. summary translation, methods for configuration, methods for setting up data in database)
-    - needs more segregation
-  - More data combinations, e.g.
-    - forecast with temperature -100, 
-    - HTTP request without a specific header
-    - two distinct users report bad weather
-    - needs more flexibility
+- Now, instead of 
+  - driver.ReportForecast() => driver.WeatherForecastApi.ReportForecast()
+  - driver.GetReportedForecast() => driver.WeatherForecastApi.GetReportedForecast()
+  - driver.NotificationAboutForecastReportedShouldBeSent() => driver.Notifications.ShouldIncludeNotificationAboutReportedForecast()
+- I call WeatherForecastApi and Notifications extension objects, because they "extend" the API of the driver with methods for specific inputs or outputs
+- WeatherForecastApi is an example of input extension object - contains triggers
+- Notifications is an example of output extension object - contains assertions
+- Some extension objects can be a mix of that
+- They have two roles
+  - grouping role (all forecast API actions are behind the WeatherForecastApi), which makes the driver object API surface smaller.
+    - show in code
+  - delegating role (logic related to similar actions is delegated into separate objects, making the driver smaller)
+    - show in code
