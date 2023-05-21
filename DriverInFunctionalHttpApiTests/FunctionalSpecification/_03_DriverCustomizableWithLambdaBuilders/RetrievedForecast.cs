@@ -7,7 +7,9 @@ public class RetrievedForecast : IDisposable
   private readonly IFlurlResponse _httpResponse;
   private readonly WeatherForecastDto _lastInputForecastDto;
 
-  public RetrievedForecast(IFlurlResponse httpResponse, WeatherForecastDto lastInputForecastDto)
+  public RetrievedForecast(
+    IFlurlResponse httpResponse, 
+    WeatherForecastDto lastInputForecastDto)
   {
     _httpResponse = httpResponse;
     _lastInputForecastDto = lastInputForecastDto;

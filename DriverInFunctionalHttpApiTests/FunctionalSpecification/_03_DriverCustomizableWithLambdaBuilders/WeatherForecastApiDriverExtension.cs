@@ -39,7 +39,8 @@ public class WeatherForecastApiDriverExtension
     return AttemptToReportForecast(_ => _);
   }
 
-  public async Task<ReportForecastResponse> AttemptToReportForecast(Func<WeatherForecastReportBuilder, WeatherForecastReportBuilder> customize)
+  public async Task<ReportForecastResponse> AttemptToReportForecast(
+    Func<WeatherForecastReportBuilder, WeatherForecastReportBuilder> customize)
   {
     var httpResponse = await AttemptToReportForecastViaHttp(customize);
     return new ReportForecastResponse(httpResponse);

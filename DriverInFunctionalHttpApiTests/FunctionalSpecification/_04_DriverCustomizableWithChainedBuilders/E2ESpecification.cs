@@ -23,7 +23,8 @@ public class E2ESpecification
   }
 
   [Fact]
-  public async Task ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
+  public async Task 
+    ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100()
   {
     //GIVEN
     await using var driver = new AppDriver();
