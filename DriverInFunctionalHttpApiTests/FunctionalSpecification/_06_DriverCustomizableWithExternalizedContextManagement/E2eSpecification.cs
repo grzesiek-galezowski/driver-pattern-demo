@@ -36,8 +36,6 @@ public class E2ESpecification
     var user1Tenant1ReportTemplate = new WeatherForecastReportBuilder()
       .WithUserId(userId1)
       .WithTenantId(tenantId1);
-    await using var driver = new AppDriver();
-    await driver.Start();
     var user1Forecast1 = user1Tenant1ReportTemplate
       .WithDistinctValidTemperatureC();
     var user1Forecast2 = user1Tenant1ReportTemplate
@@ -46,6 +44,9 @@ public class E2ESpecification
       .WithUserId(userId2)
       .WithTenantId(tenantId2)
       .WithDistinctValidTemperatureC();
+
+    await using var driver = new AppDriver();
+    await driver.Start();
 
     using var responseForUser1Forecast1 =
       await driver.WeatherForecastApi.Report(user1Forecast1);
@@ -73,8 +74,6 @@ public class E2ESpecification
     var user1Tenant1ReportTemplate = new WeatherForecastReportBuilder()
       .WithUserId(userId1)
       .WithTenantId(tenantId1);
-    await using var driver = new AppDriver();
-    await driver.Start();
     var user1Forecast1 = user1Tenant1ReportTemplate
       .WithDistinctValidTemperatureC();
     var user1Forecast2 = user1Tenant1ReportTemplate
@@ -83,6 +82,9 @@ public class E2ESpecification
       .WithUserId(userId2)
       .WithTenantId(tenantId2)
       .WithDistinctValidTemperatureC();
+
+    await using var driver = new AppDriver();
+    await driver.Start();
 
     using var responseForUser1Forecast1 =
       await driver.WeatherForecastApi.Report(user1Forecast1);

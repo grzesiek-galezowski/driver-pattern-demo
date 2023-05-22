@@ -1,4 +1,7 @@
-- This example adds two scenarios:
-  - ShouldAllowRetrievingReportsFromAParticularUser - shows externalized tenant id and user id
-  - ShouldAllowRetrievingAnyPastReport - shows externalized reported forecast id
-- both scenarios use template builder
+- ShouldAllowRetrievingAnyPastReport - shows externalized reported forecast id.
+- this simplifies the driver even further
+
+- the test uses a template builder
+- but still may get quite verbose, see also ShouldAllowRetrievingReportsFromAParticularUser.
+- if a scenario gets too long, there is one more way to simplify it
+  
