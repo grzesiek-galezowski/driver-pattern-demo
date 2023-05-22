@@ -10,7 +10,8 @@ public class E2ESpecification
     await driver.Start();
     var weatherForecast = new WeatherForecastReportBuilder();
 
-    using var reportForecastResponse = await driver.WeatherForecastApi.Report(weatherForecast);
+    using var reportForecastResponse = 
+        await driver.WeatherForecastApi.Report(weatherForecast);
 
     //WHEN
     using var retrievedForecast = 
@@ -32,17 +33,19 @@ public class E2ESpecification
     var userId2 = Any.String();
     var tenantId1 = Any.String();
     var tenantId2 = Any.String();
+    var user1Tenant1ReportTemplate = new WeatherForecastReportBuilder()
+      .WithUserId(userId1)
+      .WithTenantId(tenantId1);
     await using var driver = new AppDriver();
     await driver.Start();
-    var user1Forecast1 = new WeatherForecastReportBuilder()
-      .WithUserId(userId1)
-      .WithTenantId(tenantId1);
-    var user1Forecast2 = new WeatherForecastReportBuilder()
-      .WithUserId(userId1)
-      .WithTenantId(tenantId1);
+    var user1Forecast1 = user1Tenant1ReportTemplate
+      .WithDistinctValidTemperatureC();
+    var user1Forecast2 = user1Tenant1ReportTemplate
+      .WithDistinctValidTemperatureC();
     var user2Forecast = new WeatherForecastReportBuilder()
       .WithUserId(userId2)
-      .WithTenantId(tenantId2);
+      .WithTenantId(tenantId2)
+      .WithDistinctValidTemperatureC();
 
     using var responseForUser1Forecast1 = 
       await driver.WeatherForecastApi.Report(user1Forecast1);
@@ -57,6 +60,44 @@ public class E2ESpecification
 
     //THEN
     await retrievedForecasts.ShouldConsistOf(user1Forecast1, user1Forecast2);
+  }
+  
+  [Fact]
+  public async Task ShouldAllowRetrievingPastReports()
+  {
+    //GIVEN
+    var userId1 = Any.String();
+    var userId2 = Any.String();
+    var tenantId1 = Any.String();
+    var tenantId2 = Any.String();
+    var user1Tenant1ReportTemplate = new WeatherForecastReportBuilder()
+        .WithUserId(userId1)
+        .WithTenantId(tenantId1);
+    await using var driver = new AppDriver();
+    await driver.Start();
+    var user1Forecast1 = user1Tenant1ReportTemplate
+      .WithDistinctValidTemperatureC();
+    var user1Forecast2 = user1Tenant1ReportTemplate
+      .WithDistinctValidTemperatureC();
+    var user2Forecast = new WeatherForecastReportBuilder()
+      .WithUserId(userId2)
+      .WithTenantId(tenantId2)
+      .WithDistinctValidTemperatureC();
+
+    using var responseForUser1Forecast1 = 
+      await driver.WeatherForecastApi.Report(user1Forecast1);
+    using var responseForUser1Forecast2 = 
+      await driver.WeatherForecastApi.Report(user1Forecast2);
+    using var responseForUser2Forecast = 
+      await driver.WeatherForecastApi.Report(user2Forecast);
+
+    //WHEN
+    using var retrievedForecast = 
+      await driver.WeatherForecastApi.GetReportedForecastBy(
+          await responseForUser1Forecast1.GetId());
+
+    //THEN
+    await retrievedForecast.ShouldBeTheSameAs(user1Forecast1);
   }
 
   [Fact]
