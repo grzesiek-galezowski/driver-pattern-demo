@@ -1,13 +1,13 @@
 - Test Data Builder pattern, completely external
 - Let's again look at ShouldRejectForecastReportAsBadRequestWhenTemperatureIsLessThanMinus100 where we test that for temperature less than -100 and expect an error.
-
-- Immutable (why?)
-- This time, the ReportForecast() method doesn't do any request. Rather, it starts a chain where we append other method calls that further customize the request. At the end, there is a termination call (in this case Attempt(), but Run() can also be used here) that ends the configuration and sends the request.
-  - this is similar to StringBuilder, where we have .Append().Append().ToString();
-- Implementation - the context is passed along the chain of calls until the terminating call. Also the user id and tenant id are passed.
+- The builder builds a piece of immutable data with value semantics (two objects with the same values are equal), allowing passing it around and each place that needs the data can call Build()
+- The builder itself is immutable (show). I prefer immutable builders. They allow setting up "templates" with very little risk that we will corrupt some data somewhere else.
 - The advantages 
-  - the driver can prepare the object before allowing us to customize it, allowing for centralization of some decisions (like lambda one).
-  - Simple flow
+  - simple (also simple nesting builder inside a builder)
+  - external to the driver - lower complexity of the driver
+  - ability to setup "templates" in the tests for multiple requests of the same kind
 - The disadvantages 
-  - we cannot reuse the building chain (we can define helper functions that encapsulate some setup)
-  - awkward nesting, either introduce Begin(), End() or use other patterns to achieve nesting.
+  - Harder sharing of "happy" values between several different requests (e.g. if GetReportedForecast needed a user id, we would need to supply it from the test). This can be fixed at the cost of more abstraction, see the actor example.
+
+In all of these examples, the id of last reported forecast was stored in the driver, leading to less flexibility (what if we want to report two forecasts and only ask about the first one?) and the IAppDriverContext interface. The next example will show this state externalized.
+
