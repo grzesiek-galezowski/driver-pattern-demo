@@ -1,0 +1,4 @@
+- This example adds two scenarios:
+  - ShouldAllowRetrievingReportsFromAParticularUser - shows externalized tenant id and user id
+  - ShouldAllowRetrievingAnyPastReport - shows externalized reported forecast id
+- both scenarios use template builder
