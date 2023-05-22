@@ -46,7 +46,8 @@ public class WeatherForecastApiDriverExtension
     return new ReportForecastResponse(httpResponse);
   }
 
-  private async Task<IFlurlResponse> AttemptToReportForecastViaHttp(Func<WeatherForecastReportBuilder, WeatherForecastReportBuilder> customize)
+  private async Task<IFlurlResponse> AttemptToReportForecastViaHttp(
+      Func<WeatherForecastReportBuilder, WeatherForecastReportBuilder> customize)
   {
     var forecastDto = customize(
       new WeatherForecastReportBuilder(_userId, _tenantId)).Build();
