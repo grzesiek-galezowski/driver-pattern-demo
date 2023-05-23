@@ -36,7 +36,8 @@ public class E2ESpecification
     await user2.ReportNewForecast();
 
     //WHEN
-    using var allForecastsReportedByUser1 = await user1.RetrieveAllReportedForecasts();
+    using var allForecastsReportedByUser1 
+      = await user1.RetrieveAllReportedForecasts();
 
     //THEN
     await allForecastsReportedByUser1.ShouldConsistOf(user1.AllReportedForecasts());

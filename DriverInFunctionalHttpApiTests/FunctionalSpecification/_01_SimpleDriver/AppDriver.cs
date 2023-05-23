@@ -55,7 +55,8 @@ public class AppDriver : IAsyncDisposable
     var httpResponse = await _httpClient.Value()
       .Request("WeatherForecast")
       .PostJsonAsync(_lastInputForecastDto.Value());
-    _lastReportResult = await httpResponse.GetJsonAsync<ForecastCreationResultDto?>().JustAsync();
+    _lastReportResult = 
+      await httpResponse.GetJsonAsync<ForecastCreationResultDto?>().JustAsync();
   }
 
   public async Task<RetrievedForecast> GetReportedForecast()

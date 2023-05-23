@@ -12,7 +12,8 @@ public class E2ESpecification
     await driver.WeatherForecastApi.ReportForecast();
 
     //WHEN
-    using var retrievedForecast = await driver.WeatherForecastApi.GetReportedForecast();
+    using var retrievedForecast = 
+      await driver.WeatherForecastApi.GetReportedForecast();
 
     //THEN
     await retrievedForecast.ShouldBeTheSameAsReported();

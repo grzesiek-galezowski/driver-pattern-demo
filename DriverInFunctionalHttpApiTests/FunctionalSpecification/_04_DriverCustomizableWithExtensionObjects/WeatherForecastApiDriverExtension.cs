@@ -45,7 +45,13 @@ public class WeatherForecastApiDriverExtension
 
   private async Task<IFlurlResponse> AttemptToReportForecastViaHttp()
   {
-    var forecastDto = new WeatherForecastDto(_tenantId, _userId, _dateTime, _temperatureC, _summary);
+    var forecastDto = new WeatherForecastDto(
+      _tenantId,
+      _userId,
+      _dateTime,
+      _temperatureC,
+      _summary);
+
     _driverContext.SaveAsLastReportedForecast(forecastDto);
 
     var httpResponse = await _httpClient

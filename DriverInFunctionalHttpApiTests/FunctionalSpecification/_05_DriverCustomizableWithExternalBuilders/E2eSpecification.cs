@@ -6,9 +6,9 @@ public class E2ESpecification
   public async Task ShouldAllowRetrievingReportedForecast()
   {
     //GIVEN
+    var weatherForecast = new WeatherForecastReportBuilder();
     await using var driver = new AppDriver();
     await driver.Start();
-    var weatherForecast = new WeatherForecastReportBuilder();
 
     await driver.WeatherForecastApi.Report(weatherForecast);
 

@@ -12,13 +12,15 @@ public class WeatherForecastApiDriverExtension
     _disposables = disposables;
   }
 
-  public async Task<ReportForecastResponse> AttemptToReportForecast(WeatherForecastReportBuilder builder)
+  public async Task<ReportForecastResponse> AttemptToReportForecast(
+    WeatherForecastReportBuilder builder)
   {
     var httpResponse = await AttemptToReportForecastViaHttp(builder);
     return new ReportForecastResponse(httpResponse);
   }
 
-  private async Task<IFlurlResponse> AttemptToReportForecastViaHttp(WeatherForecastReportBuilder builder)
+  private async Task<IFlurlResponse> AttemptToReportForecastViaHttp(
+    WeatherForecastReportBuilder builder)
   {
     var httpResponse = await _httpClient
       .Request("WeatherForecast")
@@ -38,7 +40,9 @@ public class WeatherForecastApiDriverExtension
     return new RetrievedForecast(httpResponse);
   }
 
-  public async Task<RetrievedForecasts> GetReportedForecastsFrom(string userId, string tenantId)
+  public async Task<RetrievedForecasts> GetReportedForecastsFrom(
+    string userId,
+    string tenantId)
   {
     var httpResponse = await _httpClient.Request("WeatherForecast")
       .AppendPathSegment(tenantId)
