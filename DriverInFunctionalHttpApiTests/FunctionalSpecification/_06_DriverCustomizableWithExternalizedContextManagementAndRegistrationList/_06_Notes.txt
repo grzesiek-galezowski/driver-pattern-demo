@@ -1,3 +1,4 @@
 - This test introduces a Disposables class that's used inside the driver.
 - Every created object that has to be manually disposed is registered in the list (see e.g. AppDriver constructor or AttemptToReportForecastViaHttp). 
-- The Disposables instance is then disposed of in the driver's DisposeAsync() and disposes of all the registered resources,
+- The Disposables instance is then disposed of in the driver's DisposeAsync() and disposes of all the registered resources. The example implementation doesn't catch any exceptions, but a real-life one should.
+- Thanks to this, we can invoke await driver.WeatherForecastApi.Report(...); multiple times, ignoring the result (see ShouldAllowRetrievingReportsFromAParticularUser).

@@ -6,9 +6,9 @@ public class E2ESpecification
   public async Task ShouldAllowRetrievingReportedForecast()
   {
     //GIVEN
+    var weatherForecast = new WeatherForecastReportBuilder();
     await using var driver = new AppDriver();
     await driver.Start();
-    var weatherForecast = new WeatherForecastReportBuilder();
 
     var reportForecastResponse = 
       await driver.WeatherForecastApi.Report(weatherForecast);
@@ -25,15 +25,14 @@ public class E2ESpecification
   }
     
   [Fact]
-  public async Task ShouldAllowRetrievingReportsFromAParticularUser()
+  public async Task 
+    ShouldAllowRetrievingReportsFromAParticularUser()
   {
     //GIVEN
     var userId1 = Any.String();
     var userId2 = Any.String();
     var tenantId1 = Any.String();
     var tenantId2 = Any.String();
-    await using var driver = new AppDriver();
-    await driver.Start();
     var user1Forecast1 = new WeatherForecastReportBuilder()
       .WithUserId(userId1)
       .WithTenantId(tenantId1);
@@ -43,6 +42,9 @@ public class E2ESpecification
     var user2Forecast = new WeatherForecastReportBuilder()
       .WithUserId(userId2)
       .WithTenantId(tenantId2);
+
+    await using var driver = new AppDriver();
+    await driver.Start();
 
     await driver.WeatherForecastApi.Report(user1Forecast1);
     await driver.WeatherForecastApi.Report(user1Forecast2);

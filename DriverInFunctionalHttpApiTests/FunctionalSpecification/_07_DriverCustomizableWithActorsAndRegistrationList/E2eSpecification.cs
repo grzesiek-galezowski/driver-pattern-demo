@@ -36,10 +36,10 @@ public class E2ESpecification
     await user2.ReportNewForecast();
 
     //WHEN
-    var allForecastsReportedByUser1 = await user1.RetrieveAllReportedForecasts();
+    var allForecastsFromUser1 = await user1.RetrieveAllReportedForecasts();
 
     //THEN
-    await allForecastsReportedByUser1.ShouldConsistOf(user1.AllReportedForecasts());
+    await allForecastsFromUser1.ShouldConsistOf(user1.AllReportedForecasts());
   }
 
   [Fact]
