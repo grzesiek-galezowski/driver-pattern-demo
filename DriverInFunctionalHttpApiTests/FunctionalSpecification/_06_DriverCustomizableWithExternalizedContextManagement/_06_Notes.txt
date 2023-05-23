@@ -1,7 +1,5 @@
 - ShouldAllowRetrievingAnyPastReport - shows externalized reported forecast id.
-- this simplifies the driver even further
-
-- the test uses a template builder
-- but still may get quite verbose, see also ShouldAllowRetrievingReportsFromAParticularUser.
-- if a scenario gets too long, there is one more way to simplify it
-  
+- this simplifies the driver even further, as there is no need to hold and pass _lastReportResult and there is no need for IAppDriverContext interface anymore.
+- on the other hand, the test has to manage the results (with using keyword). 
+  - This forces us to assign the result to a variable even when we aren't using it for anything
+  - The next example will attempt to fix this
