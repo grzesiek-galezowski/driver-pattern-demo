@@ -40,6 +40,12 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
     ForceStart();
   }
 
+  public NotificationsDriverExtension Notifications =>
+    new(_notificationRecipient);
+
+  public WeatherForecastApiDriverExtension WeatherForecastApi
+    => new(this, _httpClient.Value(), _lastReportResult);
+
   //Note explicit implementation
   void IAppDriverContext.SaveAsLastForecastReportResult(ForecastCreationResultDto dto)
   {
@@ -52,12 +58,6 @@ public class AppDriver : IAsyncDisposable, IAppDriverContext
     await _webApplicationFactory.DisposeAsync();
     _notificationRecipient.Dispose();
   }
-
-  public NotificationsDriverExtension Notifications =>
-    new(_notificationRecipient);
-
-  public WeatherForecastApiDriverExtension WeatherForecastApi
-    => new(this, _httpClient.Value(), _lastReportResult);
 
   private void ForceStart()
   {

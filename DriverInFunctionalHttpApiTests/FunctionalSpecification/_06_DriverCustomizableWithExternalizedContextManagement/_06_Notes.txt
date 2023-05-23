@@ -1,5 +1,5 @@
 - ShouldAllowRetrievingAnyPastReport - shows externalized reported forecast id.
 - this simplifies the driver even further, as there is no need to hold and pass _lastReportResult and there is no need for IAppDriverContext interface anymore.
-- on the other hand, the test has to manage the results (with using keyword). 
+- There is one more thing we can improve - the test has to manage all the results (with using keyword). 
   - This forces us to assign the result to a variable even when we aren't using it for anything
-  - The next example will attempt to fix this
+  - The next example will attempt to fix this.
