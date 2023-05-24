@@ -39,10 +39,10 @@ public class WeatherForecastApiDriverExtension
     using var httpResponse = await _httpClient
       .Request("WeatherForecast")
       .PostJsonAsync(forecastDto);
-    var jsonResponse = await httpResponse.GetJsonAsync<ForecastCreationResultDto>();
+    var creationResultDto = await httpResponse.GetJsonAsync<ForecastCreationResultDto>();
 
     _driverContext.SaveAsLastReportedForecast(forecastDto);
-    _driverContext.SaveAsLastForecastReportResult(jsonResponse);
+    _driverContext.SaveAsLastForecastReportResult(creationResultDto);
   }
 
   public async Task<RetrievedForecast> GetReportedForecast()
