@@ -8,3 +8,13 @@
 - The disadvantages 
   - we cannot reuse the builder (we can define helper functions that encapsulate some setup)
   - it gets harder to debug when lambdas are nested in lambdas (e.g. with nested data structures)
+    using var reportForecastResponse2 = 
+      await driver.WeatherForecastApi
+        .AttemptToReportForecast(request => request
+          .WithTemperatureC(-101)
+          .WithUserData(d => d
+            .WithName("Zenek")
+            .WithAddress(a => a
+              .WithStreet("Sezamkowa")
+              .WithNumber(123))));
+
