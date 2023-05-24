@@ -21,6 +21,12 @@
 - GetReportedForecast, ShouldBeTheSameAsReported - buttery butter
 - Two typical ways of evolution:
   - More "endpoints"" (e.g. summary translation, methods for configuration, methods for setting up data in database)
+    driver.SummaryTranslationEndpointReturns(xxx);
+    driver.SummaryTranslationEndpointReturnsError();
+    driver.ConfigurationEndpointReturnsUserData(yyy);
+    driver.ConfigurationEndpointReturnsCustomerData(yyy2);
+    driver.SetupDatabaseToContainForecasts(zzz);
+    driver.ClearDatabase(zzz);
     - needs more segregation
   - More data combinations, e.g.
     - forecast with temperature -100, 
