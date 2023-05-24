@@ -3,7 +3,8 @@
   - the method invoked in that test is called AttemptToReportForecast. It's different than ReportForecast. Attempt is a suffix I use for methods I allow to fail, which means even if it fails, the execution continues. (Compared to this, the ReportForecast method fails on error). This is a variant I typically use where I checking for errors - I want the failure to come from the assertion rather than from a 3rd party library.
   - the method accepts a lambda. This lambda receives a builder valid object set up for positive scenario and has a chance to alter it (e.g. by changing the temperature like in this case).
 - The builder accepts two arguments in its constructor: string UserId, string TenantId. These are the default values set in the driver. The test has the option to override any value
-- The advantage is that the driver can prepare the object before allowing us to customize it, allowing for centralization of some decisions.
+- The advantage 
+  - the driver can prepare the object before allowing us to customize it, allowing for centralization of some decisions.
 - The disadvantages 
   - we cannot reuse the builder (we can define helper functions that encapsulate some setup)
   - it gets harder to debug when lambdas are nested in lambdas (e.g. with nested data structures)
