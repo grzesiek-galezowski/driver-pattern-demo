@@ -9,8 +9,8 @@
   - Assert that a notification was sent to a wiremock about the reported forecast.
 - Easier to spot that the notification assertion doesn't fit
 - Why creation and start are separated?
-  - e.g. driver.SetupTooShortHttpRetryTimeout()
-  - e.g. driver.SetXyzFeatureFlag(x);
+  - driver.SetupTooShortHttpRetryTimeout();
+  - driver.SetXyzFeatureFlag(x);
   - a static method can be introduced as a shortcut, e.g. StartNew()
 - What is the retrievedForecast?
   - AssertObject pattern

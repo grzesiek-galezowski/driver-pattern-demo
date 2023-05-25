@@ -1,7 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using DriverPatternDemo;
 
 namespace FunctionalSpecification._00_WithoutDriver;
 
+[SuppressMessage("ReSharper", "AccessToDisposedClosure")]
 public class E2ESpecification
 {
   [Fact]
@@ -16,7 +18,7 @@ public class E2ESpecification
       Request.Create()
         .WithPath("/notifications")
         .UsingPost()).RespondWith(
-      Response.Create()
+    Response.Create()
         .WithStatusCode(HttpStatusCode.OK));
     
     //Define request data
@@ -35,8 +37,7 @@ public class E2ESpecification
           {
             appConfig.AddInMemoryCollection(new Dictionary<string, string?>
             {
-              ["NotificationsConfiguration:BaseUrl"] 
-                = notificationRecipient.Urls.Single()
+              ["NotificationsConfiguration:BaseUrl"] = notificationRecipient.Url
             });
           })
           .UseEnvironment("Development");
@@ -46,18 +47,20 @@ public class E2ESpecification
     using var client = new FlurlClient(webApp.CreateClient());
 
     //Report weather forecast
-    using var postJsonAsync = await client.Request("WeatherForecast")
+    using var reportForecastResponse = await client
+      .Request("WeatherForecast")
       .PostJsonAsync(inputForecastDto);
-    var resultDto = await postJsonAsync.GetJsonAsync<ForecastCreationResultDto>();
+    var resultDto = await reportForecastResponse.GetJsonAsync<ForecastCreationResultDto>();
 
     //Obtain weather forecast by id
-    using var httpResponse = await client.Request("WeatherForecast")
+    using var getForecastResponse = await client
+      .Request("WeatherForecast")
       .AppendPathSegment(resultDto.Id)
       .AllowAnyHttpStatus()
       .GetAsync();
 
     //Assert that obtained forecast is the same as reported
-    var weatherForecastDto = await httpResponse.GetJsonAsync<WeatherForecastDto>();
+    var weatherForecastDto = await getForecastResponse.GetJsonAsync<WeatherForecastDto>();
     weatherForecastDto.Should().BeEquivalentTo(inputForecastDto);
 
     //Assert notification was sent about the forecast
