@@ -30,6 +30,7 @@ I used this pattern in C# and Java, but suspect it can be used in others.
 
 * The biggest advantage is that it brings the test very close to a statement of intention - when done well, driver pattern removes a lot of noise from the test body. This may improve readability of the tests and (at some point) the ability to create new scenarios without digging through a lot of low-level code.
 * Driver provides an alternative to a TestBase approach, which I personally find usually ends up as unstructured and coincidence-driven trash bin for stuff the team wants out of the test body.
+* Driver is a pattern that is mostly independent of technology, type of product, testing framework and architectural level
 
 ## Driver pattern - disadvantages
 
@@ -47,12 +48,17 @@ Through discussion with some good souls who acknowledged that the pattern is not
 
 All the example driver implementations are written against a sample ASP.Net Core application. The application is based on the standard "weather forecast" template, to make it more familiar, although many parts were modified.
 
+The service is a simple CRUD-like service, supporting:
+* adding weather forecast
+* getting a forecast by id (id is returned by the add operation)
+* getting all forecasts reported by a user
+
 Some words of caution before we move on:
 
 * In the production part, neither the code nor the API is pretty. The production part of this sample does not aim to demonstrate how to design good web APIs or services or classes. It is made only to serve as something executable for the tests.
 * In one of the example tests, I added a check that isn't really part of the scenario. The purpose is only to decrease the volume of code for easier digestion, nothing more.
 * The examples show an evolution process. The first example is by far not perfect and the final one still has some stuff that can be improved.
-* Driver is a pattern. There is no "one true way" of implementing it, but rather a set of common characteristics and common problem the different implementations attempt to solve. Thus, if your driver needs to be different than the one presented here, it doesn't mean it's bad implementation. It might be that the forces playing out in your product make you go in a slightly different direction.
+* Driver is a pattern. There is no "one true way" of implementing it, but rather a set of common characteristics and a common problem that the different implementations attempt to solve. Thus, if your driver needs to be different than the one presented here, it doesn't mean it's bad implementation. It might be that the forces playing out in your product make you go in a slightly different direction.
 * I am not claiming that the driver pattern is the best way to automate tests. I am still learning, so everything written here is provided as a sort of RFC.
 
 ## [Production code](https://github.com/grzesiek-galezowski/driver-pattern-demo/blob/main/DriverInFunctionalHttpApiTests/DriverPatternDemo/Controllers/WeatherForecastController.cs)
@@ -105,16 +111,16 @@ public async Task ShouldAllowRetrievingReportedForecast()
 {
   //GIVEN
   await using var driver = new AppDriver();
-  await driver.StartAsync();
-
+  await driver.Start();
+        
   await driver.ReportWeatherForecast();
-
+  
   //WHEN
   using var retrievedForecast = await driver.GetReportedForecast();
-
+  
   //THEN
   await retrievedForecast.ShouldBeTheSameAsReported();
-
+        
   //not really part of the scenario...
   driver.NotificationAboutForecastReportedShouldBeSent();
 }
@@ -123,15 +129,15 @@ public async Task ShouldAllowRetrievingReportedForecast()
 The steps are roughly:
 
 1. Create a driver
-1. Start a driver (initiate tested code's startup sequence)
+1. Start the application through the driver
 1. Report a single weather forecast
-1. Retrieve reported forecast
-1. Assert that the retrieved forecast is the same as previously reported
+1. Retrieve the reported forecast
+1. Assert that the retrieved forecast is the same as the one previously reported
 1. Assert that a notification was sent to a wiremock about the reported forecast.
 
 Several things to note about the above test:
 
-1. Note how I separated creating a driver from starting it. The main reason is that typically I want to have a place to do some additional setup before starting the application, e.g. changing configuration or setting up some data in database. There are times when the behavior of starting application is interesting by itself and I want to have a place where I could influence this behavior. This place is exactly between creating the driver and starting the application.
+1. Note how I separated creating a driver from starting it. The main reason is that typically I want to have a place to do some additional setup before starting the application, e.g. changing configuration or setting up some data in database. There are times when the behavior of starting application is interesting by itself and I want to have a place where I could influence this behavior. This place is exactly between creating the driver and starting the application. I can still create a shortcut static method in the driver that does both these steps if I don't need to do anything between creating a driver and starting the application.
 1. The test does almost no state management. Note that in the assertion I say `retrievedForecast.ShouldBeTheSameAsReported()` and I don't pass any arguments. The driver holds all the state internally. I did it like this out of pure convenience - this is NOT an inherent property of driver pattern. The first test I would typically write using TDD and when sketching the scenario before the implementation, I don't want to think too much about the input data structures and output data structures. I want to specify my intention and then I'll introduce more control over the data as necessary.
 1. Note the `retrievedForecast` - this isn't a DTO, but also a part of driver - it's an object made for tests and allows executing some assertions on the retrieved data (precisely speaking, it's an implementation of [Assert Object](https://www.codejourney.net/2020/11/improve-your-tests-with-assert-object-pattern) pattern). Again, when I TDD, I don't care yet what the data is going to be. I just want to state my intention.
 
@@ -144,60 +150,65 @@ public async Task ShouldAllowRetrievingReportedForecast()
   var tenantId = Any.String();
   var userId = Any.String();
 
+  //Start and configure a wiremock server for notifications
   using var notificationRecipient = WireMockServer.Start();
   notificationRecipient.Given(
     Request.Create()
       .WithPath("/notifications")
       .UsingPost()).RespondWith(
-    Response.Create()
+  Response.Create()
       .WithStatusCode(HttpStatusCode.OK));
-
+  
+  //Define request data
   var inputForecastDto = new WeatherForecastDto(
     tenantId, 
     userId, 
     Any.DateTime(),
     Any.Integer(),
     Any.String());
-  using var host = Host
-    .CreateDefaultBuilder()
-    .ConfigureWebHostDefaults(webBuilder =>
+
+  //Configure application startup (override configuration)
+  await using var webApp = new WebApplicationFactory<Program>()
+    .WithWebHostBuilder(c =>
     {
-      webBuilder
-        .UseTestServer()
-        .ConfigureAppConfiguration(appConfig =>
+      c.ConfigureAppConfiguration(appConfig =>
         {
-          appConfig.AddInMemoryCollection(new Dictionary<string, string>
+          appConfig.AddInMemoryCollection(new Dictionary<string, string?>
           {
-            ["NotificationsConfiguration:BaseUrl"] = notificationRecipient.Urls.Single()
+            ["NotificationsConfiguration:BaseUrl"] = notificationRecipient.Url
           });
         })
-        .UseEnvironment("Development")
-        .UseStartup<Startup>();
-    }).Build();
+        .UseEnvironment("Development");
+    });
 
-  await host.StartAsync();
+  //Start the application and obtain HTTP client
+  using var client = new FlurlClient(webApp.CreateClient());
 
-  var client = new FlurlClient(host.GetTestClient());
-
-  using var postJsonAsync = await client.Request("WeatherForecast")
+  //Report weather forecast
+  using var reportForecastResponse = await client
+    .Request("WeatherForecast")
     .PostJsonAsync(inputForecastDto);
-  var resultDto = await postJsonAsync.GetJsonAsync<ForecastCreationResultDto>();
+  var resultDto = await reportForecastResponse.GetJsonAsync<ForecastCreationResultDto>();
 
-  using var httpResponse = await client.Request("WeatherForecast")
+  //Obtain weather forecast by id
+  using var getForecastResponse = await client
+    .Request("WeatherForecast")
     .AppendPathSegment(resultDto.Id)
     .AllowAnyHttpStatus()
     .GetAsync();
 
-  var weatherForecastDto = await httpResponse.GetJsonAsync<WeatherForecastDto>();
+  //Assert that obtained forecast is the same as reported
+  var weatherForecastDto = await getForecastResponse.GetJsonAsync<WeatherForecastDto>();
   weatherForecastDto.Should().BeEquivalentTo(inputForecastDto);
 
+  //Assert notification was sent about the forecast
   notificationRecipient.LogEntries.Should().ContainSingle(entry =>
     entry.RequestMatchResult.IsPerfectMatch
     && entry.RequestMessage.Path == "/notifications"
     && entry.RequestMessage.Method == "POST"
     && JsonConvert.DeserializeObject<WeatherForecastSuccessfullyReportedEventDto>(
-       entry.RequestMessage.Body) == new WeatherForecastSuccessfullyReportedEventDto(
-       tenantId, userId, inputForecastDto.TemperatureC));
+      entry.RequestMessage.Body) == new WeatherForecastSuccessfullyReportedEventDto(
+      tenantId, userId, inputForecastDto.TemperatureC));
 }
 ```
 
@@ -241,10 +252,10 @@ If you look at how these properties are defined:
 
 ```csharp
 public NotificationsDriverExtension Notifications 
-  => new(_userId, _tenantId, _notificationRecipient, _lastInputForecastDto.Value);
+  => new(_userId, _tenantId, _notificationRecipient, _lastInputForecastDto.Value());
 
 public WeatherForecastApiDriverExtension WeatherForecastApi 
-  => new(this, _tenantId, _userId, HttpClient, _lastReportResult, _lastInputForecastDto);
+  => new(this, _tenantId, _userId, _httpClient.Value(), _lastReportResult, _lastInputForecastDto);
 ```
 
 You'll notice that the extension objects are always created anew every time the properties are accessed. This is on purpose, to avoid the necessity of state synchronization between them and the driver. The driver holds all the current data and feeds it to extension objects every time they are created. This way the extension objects get the most "fresh" data.
