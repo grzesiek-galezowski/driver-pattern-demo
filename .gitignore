@@ -350,3 +350,6 @@ MigrationBackup/
 .ionide/
 *.ncrunchsolution
 DriverInFunctionalHttpApiTests/DriverPatternDemo/Properties/launchSettings.json
+.nuke/temp/execution-plan.html
+.nuke/build.schema.json
+.nuke/parameters.json

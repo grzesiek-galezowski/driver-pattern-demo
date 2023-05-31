@@ -13,12 +13,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFiles", "SolutionFi
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "..\build\_build.csproj", "{DDB977C9-0837-4D58-8B79-B0ED695D3D4A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DDB977C9-0837-4D58-8B79-B0ED695D3D4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDB977C9-0837-4D58-8B79-B0ED695D3D4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DD6BB1E9-89C6-4C0C-9E34-8FE201DDD473}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DD6BB1E9-89C6-4C0C-9E34-8FE201DDD473}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DD6BB1E9-89C6-4C0C-9E34-8FE201DDD473}.Release|Any CPU.ActiveCfg = Release|Any CPU
